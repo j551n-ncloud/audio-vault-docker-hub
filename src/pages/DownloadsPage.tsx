@@ -2,7 +2,6 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { useTheme } from "@/hooks/useTheme";
 import { useDownloadStatus } from "@/hooks/useDownloadStatus";
 
 // Import the refactored components
@@ -29,7 +28,6 @@ export default function DownloadsPage() {
   const [activeTab, setActiveTab] = useState("spotify");
   
   const { toast } = useToast();
-  const { isDarkMode, setIsDarkMode } = useTheme();
   const { embedStatus, playlistStatus, createPlaylist } = useDownloadStatus();
 
   // Handlers
@@ -111,8 +109,6 @@ export default function DownloadsPage() {
     <div className="p-4 md:p-6 max-w-4xl mx-auto">
       <PageHeader 
         title="Audio Downloader"
-        isDarkMode={isDarkMode}
-        setIsDarkMode={setIsDarkMode}
         onCreateFolder={() => setIsCreateFolderDialogOpen(true)}
         onOpenSettings={() => setIsProfileDialogOpen(true)}
       />

@@ -5,11 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Switch } from "@/components/ui/switch";
-import { useTheme } from "@/hooks/useTheme";
-import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Fingerprint, Key, User } from "lucide-react";
+import { Key, User } from "lucide-react";
 
 interface ProfileSettingsDialogProps {
   isOpen: boolean;
@@ -27,13 +24,7 @@ export default function ProfileSettingsDialog({
   const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
-  
-  const { isDarkMode, setIsDarkMode } = useTheme();
   const { toast } = useToast();
-  
-  const [securitySettings, setSecuritySettings] = useLocalStorage("security-settings", {
-    passkeysEnabled: false,
-  });
   
   const handleUpdateProfile = () => {
     if (!password) {
@@ -45,23 +36,7 @@ export default function ProfileSettingsDialog({
       return;
     }
     
-    // Save theme preference to local storage
-    localStorage.setItem("theme", isDarkMode ? "dark" : "light");
-    
     onUpdateProfile();
-  };
-
-  const handleEnablePasskeys = () => {
-    // In a real app, this would start the passkey registration process
-    setSecuritySettings({
-      ...securitySettings,
-      passkeysEnabled: true
-    });
-    
-    toast({
-      title: "Passkeys enabled",
-      description: "You can now use biometrics to sign in"
-    });
   };
 
   return (
@@ -116,60 +91,15 @@ export default function ProfileSettingsDialog({
                 className="bg-background border"
               />
             </div>
-            <div className="flex items-center justify-between pt-2">
-              <Label htmlFor="theme-toggle">Theme</Label>
-              <div className="flex items-center space-x-2">
-                <Switch 
-                  id="theme-toggle" 
-                  checked={isDarkMode}
-                  onCheckedChange={setIsDarkMode}
-                />
-                <Label htmlFor="theme-toggle">{isDarkMode ? 'Dark' : 'Light'}</Label>
-              </div>
-            </div>
           </TabsContent>
           
           <TabsContent value="security" className="space-y-4 py-4">
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="font-medium">Passkeys</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Use biometrics for faster and more secure sign-in
-                  </p>
-                </div>
-                <Switch 
-                  checked={securitySettings.passkeysEnabled}
-                  onCheckedChange={(checked) => {
-                    if (checked) {
-                      handleEnablePasskeys();
-                    } else {
-                      setSecuritySettings({
-                        ...securitySettings,
-                        passkeysEnabled: false
-                      });
-                      toast({
-                        title: "Passkeys disabled",
-                        description: "Biometric sign-in has been disabled"
-                      });
-                    }
-                  }}
-                />
+              <div className="py-2">
+                <p className="text-sm text-muted-foreground">
+                  Security settings have been moved to the main Settings page. Please visit the Settings page to manage security options.
+                </p>
               </div>
-              
-              {securitySettings.passkeysEnabled && (
-                <div className="bg-primary/10 border border-primary/20 rounded-md p-3 mt-2">
-                  <div className="flex items-start gap-3">
-                    <Fingerprint className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-                    <div>
-                      <h5 className="font-medium">Passkey registered</h5>
-                      <p className="text-sm text-muted-foreground">
-                        You can use your device biometrics to sign in
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           </TabsContent>
         </Tabs>

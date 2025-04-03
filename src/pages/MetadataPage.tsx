@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,7 +18,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Switch } from "@/components/ui/switch";
 
 type FileItem = {
   name: string;
@@ -45,7 +43,6 @@ export default function MetadataPage() {
   const [newFileName, setNewFileName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [lyrics, setLyrics] = useState("");
-  const [isDarkMode, setIsDarkMode] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"name" | "date" | "size">("name");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
@@ -62,21 +59,7 @@ export default function MetadataPage() {
   const [isAlbumCoverDialogOpen, setIsAlbumCoverDialogOpen] = useState(false);
   const [albumCoverUrl, setAlbumCoverUrl] = useState("");
 
-  // Theme switcher effect
   useEffect(() => {
-    if (isDarkMode) {
-      document.documentElement.classList.add('dark');
-      document.documentElement.classList.remove('light');
-    } else {
-      document.documentElement.classList.remove('dark');
-      document.documentElement.classList.add('light');
-    }
-  }, [isDarkMode]);
-
-  // Simulate fetching files - this would be replaced with actual API calls
-  useEffect(() => {
-    // In a real application, this would be an API call to your backend
-    // For this demo, we're mocking the data
     setIsLoading(true);
     
     setTimeout(() => {
@@ -94,7 +77,6 @@ export default function MetadataPage() {
     }, 800);
   }, [currentPath]);
 
-  // Filter and sort files
   const filteredFiles = files.filter(file => 
     searchQuery ? file.name.toLowerCase().includes(searchQuery.toLowerCase()) : true
   ).sort((a, b) => {
@@ -117,7 +99,6 @@ export default function MetadataPage() {
 
   const handleFileSelect = (file: FileItem) => {
     if (selectMode) {
-      // Toggle selection in multi-select mode
       const updatedFiles = files.map(f => {
         if (f.name === file.name) {
           return { ...f, selected: !f.selected };
@@ -129,14 +110,12 @@ export default function MetadataPage() {
     }
     
     if (file.type === "folder") {
-      // Navigate into folder
       setCurrentPath(`${currentPath}/${file.name}`);
       return;
     }
     
     setSelectedFile(file);
     
-    // Simulate fetching metadata - in a real app, this would call your backend
     const mockMetadata: MetadataField[] = [
       { key: "Title", value: file.name.replace(".mp3", ""), editable: true },
       { key: "Artist", value: "Unknown Artist", editable: true },
@@ -150,16 +129,14 @@ export default function MetadataPage() {
     
     setMetadata(mockMetadata);
     
-    // If it's an MP3 file, simulate checking for lyrics
     if (file.name.endsWith(".mp3")) {
-      const hasLyrics = file.name === "Song 3.mp3"; // Simulate that Song 3 has lyrics
+      const hasLyrics = file.name === "Song 3.mp3";
       if (hasLyrics) {
         setLyrics("[00:00.00]Sample lyrics for demonstration\n[00:03.50]This would be actual synchronized lyrics\n[00:07.20]From the .lrc file");
       } else {
         setLyrics("");
       }
     } else if (file.name.endsWith(".lrc")) {
-      // If it's a lyrics file, show its content
       setLyrics("[00:00.00]Sample lyrics for demonstration\n[00:03.50]This would be actual synchronized lyrics\n[00:07.20]From the .lrc file");
     } else {
       setLyrics("");
@@ -167,13 +144,11 @@ export default function MetadataPage() {
   };
 
   const handleDeleteFile = (file: FileItem) => {
-    // In a real app, this would call your backend API
     toast({
       title: "File deleted",
       description: `${file.name} has been deleted`,
     });
     
-    // Update UI
     setFiles(files.filter(f => f.name !== file.name));
     if (selectedFile && selectedFile.name === file.name) {
       setSelectedFile(null);
@@ -185,13 +160,11 @@ export default function MetadataPage() {
   const handleRenameFile = () => {
     if (!selectedFile || !newFileName) return;
     
-    // In a real app, this would call your backend API
     toast({
       title: "File renamed",
       description: `Renamed ${selectedFile.name} to ${newFileName}`,
     });
     
-    // Update UI
     const updatedFiles = files.map(f => {
       if (f.name === selectedFile.name) {
         return { ...f, name: newFileName };
@@ -207,7 +180,6 @@ export default function MetadataPage() {
   const handleSaveMetadata = () => {
     if (!selectedFile) return;
     
-    // In a real app, this would call your backend API
     toast({
       title: "Metadata saved",
       description: "File metadata has been updated",
@@ -223,10 +195,8 @@ export default function MetadataPage() {
   };
 
   const handleRefresh = () => {
-    // Refresh the current directory
     setIsLoading(true);
     
-    // In a real app, this would refresh data from the backend
     setTimeout(() => {
       setIsLoading(false);
       toast({
@@ -239,7 +209,6 @@ export default function MetadataPage() {
   const handleCreatePlaylist = () => {
     if (!playlistName) return;
     
-    // Get selected files or use all MP3 files in current directory
     const selectedMp3Files = selectMode
       ? files.filter(f => f.selected && f.name.endsWith(".mp3"))
       : files.filter(f => f.name.endsWith(".mp3"));
@@ -253,13 +222,11 @@ export default function MetadataPage() {
       return;
     }
     
-    // In a real app, this would call your backend API
     toast({
       title: "Playlist created",
       description: `Created playlist: ${playlistName}.m3u with ${selectedMp3Files.length} tracks`,
     });
     
-    // Add the new playlist to the file list
     setFiles([
       ...files, 
       { 
@@ -271,10 +238,8 @@ export default function MetadataPage() {
       }
     ]);
     
-    // Exit selection mode if active
     if (selectMode) setSelectMode(false);
     
-    // Clear selections
     const updatedFiles = files.map(f => ({ ...f, selected: false }));
     setFiles(updatedFiles);
     
@@ -285,13 +250,11 @@ export default function MetadataPage() {
   const handleCreateFolder = () => {
     if (!folderName) return;
     
-    // In a real app, this would call your backend API
     toast({
       title: "Folder created",
       description: `Created folder: ${folderName}`,
     });
     
-    // Add the new folder to the file list
     setFiles([
       ...files,
       {
@@ -329,8 +292,6 @@ export default function MetadataPage() {
     setProcessPath(currentPath);
     setIsProcessingDialogOpen(true);
     
-    // In a real app, this would call your backend API
-    // Simulating API call
     setTimeout(() => {
       setIsProcessingDialogOpen(false);
       toast({
@@ -338,10 +299,8 @@ export default function MetadataPage() {
         description: `Embedded lyrics into ${selectedMp3Files.length} files`,
       });
       
-      // Exit selection mode if active
       if (selectMode) setSelectMode(false);
       
-      // Clear selections
       const updatedFiles = files.map(f => ({ ...f, selected: false }));
       setFiles(updatedFiles);
     }, 1500);
@@ -350,7 +309,6 @@ export default function MetadataPage() {
   const handleToggleSelectMode = () => {
     setSelectMode(!selectMode);
     if (!selectMode) {
-      // Clear any existing selections when entering select mode
       const updatedFiles = files.map(f => ({ ...f, selected: false }));
       setFiles(updatedFiles);
       setSelectedFile(null);
@@ -386,7 +344,6 @@ export default function MetadataPage() {
       description: "Updating album artwork..."
     });
     
-    // Simulate album cover update
     setTimeout(() => {
       toast({
         title: "Album cover updated",
@@ -414,14 +371,6 @@ export default function MetadataPage() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Audio Metadata Manager</h1>
         <div className="flex gap-2 items-center">
-          <div className="flex items-center space-x-2">
-            <Switch 
-              id="theme-mode" 
-              checked={isDarkMode}
-              onCheckedChange={setIsDarkMode}
-            />
-            <Label htmlFor="theme-mode" className="text-sm">{isDarkMode ? "Dark" : "Light"}</Label>
-          </div>
           <Button
             variant={selectMode ? "secondary" : "outline"}
             onClick={handleToggleSelectMode}
@@ -472,7 +421,6 @@ export default function MetadataPage() {
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* File browser section */}
         <Card className="md:col-span-2 border">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-xl">File Browser</CardTitle>
@@ -643,7 +591,6 @@ export default function MetadataPage() {
           </CardContent>
         </Card>
 
-        {/* Metadata section */}
         <Card className="border">
           <CardHeader>
             <CardTitle className="text-xl">File Details</CardTitle>
@@ -735,7 +682,6 @@ export default function MetadataPage() {
         </Card>
       </div>
       
-      {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -759,7 +705,6 @@ export default function MetadataPage() {
         </DialogContent>
       </Dialog>
       
-      {/* Create Playlist Dialog */}
       <Dialog open={isCreatePlaylistDialogOpen} onOpenChange={setIsCreatePlaylistDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -789,7 +734,6 @@ export default function MetadataPage() {
         </DialogContent>
       </Dialog>
       
-      {/* Create Folder Dialog */}
       <Dialog open={isCreateFolderDialogOpen} onOpenChange={setIsCreateFolderDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -814,7 +758,6 @@ export default function MetadataPage() {
         </DialogContent>
       </Dialog>
       
-      {/* Processing Dialog */}
       <Dialog open={isProcessingDialogOpen} onOpenChange={setIsProcessingDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -833,7 +776,6 @@ export default function MetadataPage() {
         </DialogContent>
       </Dialog>
       
-      {/* Album Cover Dialog */}
       <Dialog open={isAlbumCoverDialogOpen} onOpenChange={setIsAlbumCoverDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
