@@ -49,9 +49,28 @@ app.post('/metadata', express.json(), (req, res) => {
   });
 });
 
-// Specific route for GET requests to /metadata 
+// Explicitly define routes for the React app pages
 app.get('/metadata', (req, res) => {
-  // This ensures that the React router handles this route
+  res.sendFile(path.join(__dirname, '../dist/index.html'));
+});
+
+app.get('/downloads', (req, res) => {
+  res.sendFile(path.join(__dirname, '../dist/index.html'));
+});
+
+app.get('/dashboard', (req, res) => {
+  res.sendFile(path.join(__dirname, '../dist/index.html'));
+});
+
+app.get('/library', (req, res) => {
+  res.sendFile(path.join(__dirname, '../dist/index.html'));
+});
+
+app.get('/upload', (req, res) => {
+  res.sendFile(path.join(__dirname, '../dist/index.html'));
+});
+
+app.get('/settings', (req, res) => {
   res.sendFile(path.join(__dirname, '../dist/index.html'));
 });
 
