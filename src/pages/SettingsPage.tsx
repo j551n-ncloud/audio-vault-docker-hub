@@ -9,6 +9,11 @@ import { useTheme } from "@/hooks/useTheme";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { User, Settings } from "@/components/settings/icons";
 import { useToast } from "@/hooks/use-toast";
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface UserSettings {
   email: string;
@@ -17,14 +22,47 @@ interface UserSettings {
   thumbnailsEnabled: boolean;
 }
 
+const passwordSchema = z.object({
+  currentPassword: z.string().min(1, "Current password is required"),
+  newPassword: z.string().min(8, "Password must be at least 8 characters"),
+  confirmPassword: z.string()
+})
+.refine(data => data.newPassword === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"]
+});
+
+const emailSchema = z.object({
+  email: z.string().email("Please enter a valid email"),
+  password: z.string().min(1, "Password is required to change email")
+});
+
 export default function SettingsPage() {
   const { isDarkMode, setIsDarkMode } = useTheme();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [settings, setSettings] = useLocalStorage<UserSettings>("user-settings", {
-    email: "admin@example.com",
+    email: user?.email || "admin@example.com",
     darkMode: true,
     outputDirectory: "/audio",
     thumbnailsEnabled: true
+  });
+  
+  const passwordForm = useForm({
+    resolver: zodResolver(passwordSchema),
+    defaultValues: {
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: ""
+    }
+  });
+
+  const emailForm = useForm({
+    resolver: zodResolver(emailSchema),
+    defaultValues: {
+      email: settings.email,
+      password: ""
+    }
   });
 
   const handleSaveSettings = () => {
@@ -36,6 +74,38 @@ export default function SettingsPage() {
     toast({
       title: "Settings saved",
       description: "Your settings have been saved successfully."
+    });
+  };
+
+  const onChangePassword = (values: z.infer<typeof passwordSchema>) => {
+    // In a real app, this would call an API to change the password
+    console.log("Changing password:", values);
+    
+    toast({
+      title: "Password updated",
+      description: "Your password has been changed successfully."
+    });
+    
+    passwordForm.reset();
+  };
+
+  const onChangeEmail = (values: z.infer<typeof emailSchema>) => {
+    // In a real app, this would call an API to change the email
+    console.log("Changing email:", values);
+    
+    setSettings({
+      ...settings,
+      email: values.email
+    });
+    
+    toast({
+      title: "Email updated",
+      description: "Your email has been changed successfully."
+    });
+    
+    emailForm.reset({
+      email: values.email,
+      password: ""
     });
   };
 
@@ -55,15 +125,99 @@ export default function SettingsPage() {
               Profile Settings
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-8">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email-display">Email</Label>
               <Input
-                id="email"
+                id="email-display"
                 type="email"
                 value={settings.email}
-                onChange={(e) => setSettings({ ...settings, email: e.target.value })}
+                disabled
+                className="bg-muted"
               />
+            </div>
+            
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium">Change Email</h3>
+              <Form {...emailForm}>
+                <form onSubmit={emailForm.handleSubmit(onChangeEmail)} className="space-y-4">
+                  <FormField
+                    control={emailForm.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>New Email</FormLabel>
+                        <FormControl>
+                          <Input type="email" placeholder="new.email@example.com" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={emailForm.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Current Password</FormLabel>
+                        <FormControl>
+                          <Input type="password" placeholder="Enter your current password" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <Button type="submit">Update Email</Button>
+                </form>
+              </Form>
+            </div>
+            
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium">Change Password</h3>
+              <Form {...passwordForm}>
+                <form onSubmit={passwordForm.handleSubmit(onChangePassword)} className="space-y-4">
+                  <FormField
+                    control={passwordForm.control}
+                    name="currentPassword"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Current Password</FormLabel>
+                        <FormControl>
+                          <Input type="password" placeholder="Enter your current password" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={passwordForm.control}
+                    name="newPassword"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>New Password</FormLabel>
+                        <FormControl>
+                          <Input type="password" placeholder="Enter new password" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={passwordForm.control}
+                    name="confirmPassword"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Confirm New Password</FormLabel>
+                        <FormControl>
+                          <Input type="password" placeholder="Confirm new password" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <Button type="submit">Update Password</Button>
+                </form>
+              </Form>
             </div>
           </CardContent>
         </Card>

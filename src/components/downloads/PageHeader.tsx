@@ -1,17 +1,16 @@
 
 import { Button } from "@/components/ui/button";
 import { Folder, Settings } from "lucide-react";
+import { Link } from "react-router-dom";
 
 interface PageHeaderProps {
   title: string;
   onCreateFolder: () => void;
-  onOpenSettings: () => void;
 }
 
 export default function PageHeader({
   title,
-  onCreateFolder,
-  onOpenSettings
+  onCreateFolder
 }: PageHeaderProps) {
   return (
     <div className="flex justify-between items-center mb-6">
@@ -28,10 +27,12 @@ export default function PageHeader({
         <Button
           variant="outline"
           size="sm"
-          onClick={onOpenSettings}
+          asChild
         >
-          <Settings className="mr-2 h-4 w-4" />
-          Settings
+          <Link to="/settings">
+            <Settings className="mr-2 h-4 w-4" />
+            Settings
+          </Link>
         </Button>
       </div>
     </div>

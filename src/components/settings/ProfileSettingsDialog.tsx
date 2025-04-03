@@ -22,28 +22,22 @@ export default function ProfileSettingsDialog({
   initialEmail = "admin@example.com"
 }: ProfileSettingsDialogProps) {
   const [email, setEmail] = useState(initialEmail);
-  const [password, setPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
   const { toast } = useToast();
   
   const handleUpdateProfile = () => {
-    if (!password) {
-      toast({
-        variant: "destructive",
-        title: "Input required",
-        description: "Please enter your current password to make changes"
-      });
-      return;
-    }
-    
     onUpdateProfile();
+    
+    toast({
+      title: "Profile updated",
+      description: "Your profile has been updated successfully."
+    });
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Profile Settings</DialogTitle>
+          <DialogTitle>Quick Profile Settings</DialogTitle>
         </DialogHeader>
         
         <Tabs defaultValue="profile">
@@ -68,28 +62,9 @@ export default function ProfileSettingsDialog({
                 onChange={(e) => setEmail(e.target.value)}
                 className="bg-background border"
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="current-password">Current Password</Label>
-              <Input
-                id="current-password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your current password"
-                className="bg-background border"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="new-password">New Password (leave empty to keep current)</Label>
-              <Input
-                id="new-password"
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="Enter new password"
-                className="bg-background border"
-              />
+              <p className="text-xs text-muted-foreground">
+                For full account management, visit the Settings page.
+              </p>
             </div>
           </TabsContent>
           
@@ -97,7 +72,7 @@ export default function ProfileSettingsDialog({
             <div className="space-y-2">
               <div className="py-2">
                 <p className="text-sm text-muted-foreground">
-                  Security settings have been moved to the main Settings page. Please visit the Settings page to manage security options.
+                  Security settings, including password changes, have been moved to the main Settings page. Please visit the Settings page to manage security options.
                 </p>
               </div>
             </div>
