@@ -49,6 +49,12 @@ app.post('/metadata', express.json(), (req, res) => {
   });
 });
 
+// Specific route for GET requests to /metadata 
+app.get('/metadata', (req, res) => {
+  // This ensures that the React router handles this route
+  res.sendFile(path.join(__dirname, '../dist/index.html'));
+});
+
 // Handle React routing, return all requests to React app
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../dist/index.html'));
