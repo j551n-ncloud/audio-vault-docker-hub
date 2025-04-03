@@ -1,0 +1,37 @@
+
+version: '3.8'
+
+services:
+  audio-downloader:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: audio-downloader:latest
+    container_name: audio-downloader
+    ports:
+      - "3000:8080"  # Map to the correct port
+    volumes:
+      - ./downloads:/app/downloads
+      - ./audio:/audio
+      - ./playlists:/playlists
+      - ./youtube:/youtube  # Separate folder for YouTube downloads
+    environment:
+      - NODE_ENV=production
+      - OUTPUT_DIR=/audio
+      - YOUTUBE_DIR=/youtube
+      - THUMBNAILS_ENABLED=true
+    restart: unless-stopped
+
+volumes:
+  downloads:
+    driver: local
+  audio:
+    driver: local
+  playlists:
+    driver: local
+  youtube:
+    driver: local
+
+networks:
+  default:
+    driver: bridge
