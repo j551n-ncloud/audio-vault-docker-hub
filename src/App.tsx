@@ -12,6 +12,7 @@ import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
 import DownloadsPage from "./pages/DownloadsPage";
 import MetadataPage from "./pages/MetadataPage";
+import SettingsPage from "./pages/SettingsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -33,7 +34,7 @@ const App = () => (
               <Route path="/metadata" element={<MetadataPage />} />
               <Route path="/library" element={<DashboardPage />} /> {/* Placeholder */}
               <Route path="/upload" element={<DashboardPage />} /> {/* Placeholder */}
-              <Route path="/settings" element={<DashboardPage />} /> {/* Placeholder */}
+              <Route path="/settings" element={<SettingsPage />} />
             </Route>
             
             {/* Catch-all route */}

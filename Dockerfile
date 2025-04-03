@@ -8,6 +8,7 @@ RUN apt-get update && \
     python3-pip \
     ffmpeg \
     eyeD3 \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Install spotdl and yt-dlp
@@ -29,8 +30,12 @@ RUN npm run build
 # Expose port
 EXPOSE 8080
 
-# Create directories
-RUN mkdir -p /app/downloads /audio /youtube /playlists
+# Create directories with correct permissions
+RUN mkdir -p /app/downloads /audio /youtube /playlists \
+    && chown -R node:node /app/downloads /audio /youtube /playlists
+
+# Switch to non-root user
+USER node
 
 # Start the application
 CMD ["npm", "start"]
