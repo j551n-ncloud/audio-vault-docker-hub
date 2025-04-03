@@ -52,7 +52,6 @@ export default function YoutubeDownloadTab({
       return;
     }
 
-    // Generate command preview with correct yt-dlp syntax
     let thumbnailOptions = "";
     if (embedThumbnails && writeAllThumbs) {
       thumbnailOptions = "--write-all-thumbnails --embed-thumbnail";
@@ -64,11 +63,8 @@ export default function YoutubeDownloadTab({
     
     const playlistOption = youtubeDownloadType === "playlist" ? "--yes-playlist" : "--no-playlist";
     
-    // Updated command to ensure proper audio extraction without merging formats
-    // Added -x flag before the URL to extract audio only and --audio-format mp3 to specify format
-    const command = `yt-dlp -x --audio-format mp3 --audio-quality ${audioBitrate}k ${thumbnailOptions} ${playlistOption} -o "${youtubeOutputDir}/%(title)s.%(ext)s" ${youtubeUrl}`;
+    const command = `yt-dlp -f "ba" -x --audio-format mp3 --audio-quality ${audioBitrate}k ${thumbnailOptions} ${playlistOption} -o "${youtubeOutputDir}/%(title)s.%(ext)s" ${youtubeUrl}`;
     
-    // Start download process
     startDownload({
       command,
       type: youtubeDownloadType,
@@ -192,12 +188,10 @@ export default function YoutubeDownloadTab({
           </div>
         </div>
         
-        {/* Command display */}
         {currentCommand && !isDownloading && downloadComplete && (
           <CommandDisplay command={currentCommand} />
         )}
         
-        {/* Process status display */}
         {(isDownloading || downloadComplete) && (
           <StatusDisplay 
             downloadStatus={downloadStatus}
