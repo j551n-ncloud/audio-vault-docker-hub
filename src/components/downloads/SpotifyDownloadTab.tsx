@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Download, List, Music, Image, Terminal } from "lucide-react";
+import { Download, List, Music, Image } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useDownloadStatus } from "@/hooks/useDownloadStatus";
 import { useToast } from "@/hooks/use-toast";
@@ -48,8 +48,17 @@ export default function SpotifyDownloadTab({ onCreatePlaylist, onEditCover }: Sp
       return;
     }
 
-    // Generate command using the working format confirmed by user
-    const command = `spotdl ${spotifyUrl} --output "${outputDir}" --format mp3 --bitrate ${audioBitrate}k ${generateLyrics ? '--generate-lrc' : ''}`;
+    // Ensure URL is properly formatted
+    let sanitizedUrl = spotifyUrl.trim();
+    if (!sanitizedUrl.startsWith("http")) {
+      // Add https:// if missing
+      sanitizedUrl = `https://${sanitizedUrl}`;
+    }
+    
+    // Generate command with explicit format and output path to ensure it works in container
+    const command = `spotdl "${sanitizedUrl}" --output "${outputDir}" --format mp3 --bitrate ${audioBitrate}k ${generateLyrics ? '--generate-lrc' : ''}`;
+    
+    console.log("Executing Spotify download command:", command);
     
     // Start download process
     startDownload({
