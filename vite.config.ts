@@ -11,10 +11,7 @@ export default defineConfig(({ mode }) => ({
   },
   plugins: [
     react(),
-    // Only use componentTagger in development mode
-    mode === 'development' && 
-    typeof componentTagger !== 'undefined' && 
-    componentTagger(),
+    // No componentTagger reference
   ].filter(Boolean),
   resolve: {
     alias: {
