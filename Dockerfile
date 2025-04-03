@@ -41,7 +41,7 @@ RUN echo '#!/bin/bash\n\
 \n\
 # Check if arguments were provided, otherwise prompt\n\
 if [ -z "$1" ]; then\n\
-  read -p "Enter Spotify playlist URL: " SPOTIFY_URL\n\
+  read -p "Enter Spotify URL: " SPOTIFY_URL\n\
 else\n\
   SPOTIFY_URL="$1"\n\
 fi\n\
@@ -133,11 +133,17 @@ else\n\
   OUTPUT_DIR="$2"\n\
 fi\n\
 \n\
+if [ -z "$3" ]; then\n\
+  THUMBNAIL_OPTION="--embed-thumbnail"\n\
+else\n\
+  THUMBNAIL_OPTION="$3"\n\
+fi\n\
+\n\
 # Ensure the output directory exists\n\
 mkdir -p "$OUTPUT_DIR"\n\
 \n\
-# Run yt-dlp to extract audio\n\
-yt-dlp -x --audio-format mp3 --audio-quality 320K -o "$OUTPUT_DIR/%(title)s.%(ext)s" "$YOUTUBE_URL"\n\
+# Run yt-dlp to extract audio with thumbnail options\n\
+yt-dlp -x --audio-format mp3 --audio-quality 320K $THUMBNAIL_OPTION -o "$OUTPUT_DIR/%(title)s.%(ext)s" "$YOUTUBE_URL"\n\
 \n\
 echo "YouTube download complete!"\n\
 ' > /spotdl/scripts/youtube_download.sh
