@@ -50,7 +50,7 @@ app.post('/metadata', express.json(), (req, res) => {
 });
 
 // Define static routes for React app pages
-// Fix: Ensure each route path is properly formatted
+// These routes should be simple strings without special characters or patterns
 const reactRoutes = [
   '/metadata',
   '/downloads',
@@ -62,15 +62,12 @@ const reactRoutes = [
 
 // Set up each route to serve the React app
 reactRoutes.forEach(route => {
-  // Fix: Make sure we're using a string route path without any special characters that
-  // could cause path-to-regexp parsing issues
   app.get(route, (req, res) => {
     res.sendFile(path.join(__dirname, '../dist/index.html'));
   });
 });
 
-// Make sure dynamic route parameters are properly formatted with :paramName syntax
-// Add a proper wildcard route handler
+// Catch-all route handler for any other requests
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../dist/index.html'));
 });
