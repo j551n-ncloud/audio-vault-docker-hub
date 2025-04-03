@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,15 +47,8 @@ export default function SpotifyDownloadTab({ onCreatePlaylist, onEditCover }: Sp
       return;
     }
 
-    // Ensure URL is properly formatted
-    let sanitizedUrl = spotifyUrl.trim();
-    if (!sanitizedUrl.startsWith("http")) {
-      // Add https:// if missing
-      sanitizedUrl = `https://${sanitizedUrl}`;
-    }
-    
-    // Generate command with explicit format and output path to ensure it works in container
-    const command = `spotdl "${sanitizedUrl}" --output "${outputDir}" --format mp3 --bitrate ${audioBitrate}k ${generateLyrics ? '--generate-lrc' : ''}`;
+    // Generate command using the working format confirmed by user
+    const command = `spotdl ${spotifyUrl} --output "${outputDir}" --format mp3 --bitrate ${audioBitrate}k ${generateLyrics ? '--generate-lrc' : ''}`;
     
     console.log("Executing Spotify download command:", command);
     
@@ -65,14 +57,8 @@ export default function SpotifyDownloadTab({ onCreatePlaylist, onEditCover }: Sp
       command,
       type: downloadType,
       onComplete: () => {
-        if (generateLyrics && embedLyrics) {
-          // After download is complete, we'd embed lyrics using eyeD3 as a separate step
+        if (generateLyrics) {
           simulateEmbedLyrics();
-          
-          // The actual command to embed lyrics with eyeD3 would be something like:
-          // find "${outputDir}" -name "*.mp3" -exec eyeD3 --add-lyrics="{}.lrc" {} \;
-          const eyeD3Command = `find "${outputDir}" -name "*.mp3" -exec eyeD3 --add-lyrics="{}.lrc" {} \\;`;
-          console.log("Embedding lyrics command:", eyeD3Command);
         }
       }
     });

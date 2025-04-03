@@ -1,10 +1,11 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Download, List, Folder, Image, Terminal } from "lucide-react";
+import { Download, List, Folder, Image } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useDownloadStatus } from "@/hooks/useDownloadStatus";
 import { useToast } from "@/hooks/use-toast";
@@ -63,7 +64,10 @@ export default function YoutubeDownloadTab({
     
     const playlistOption = youtubeDownloadType === "playlist" ? "--yes-playlist" : "--no-playlist";
     
-    const command = `yt-dlp -f "ba" -x --audio-format mp3 --audio-quality ${audioBitrate}k ${thumbnailOptions} ${playlistOption} -o "${youtubeOutputDir}/%(title)s.%(ext)s" ${youtubeUrl}`;
+    // Quote the YouTube URL to handle special characters better
+    const command = `yt-dlp -f "ba" -x --audio-format mp3 --audio-quality ${audioBitrate}k ${thumbnailOptions} ${playlistOption} -o "${youtubeOutputDir}/%(title)s.%(ext)s" "${youtubeUrl}"`;
+    
+    console.log("Executing YouTube download command:", command);
     
     startDownload({
       command,

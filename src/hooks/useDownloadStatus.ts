@@ -60,15 +60,10 @@ export function useDownloadStatus() {
     setDownloadComplete(false);
     setCurrentCommand(command);
 
-    // Check if it's a YouTube download (contains yt-dlp)
-    const isYouTubeDownload = command.includes("yt-dlp");
-    
-    // For YouTube downloads, modify command to auto-answer any prompts
-    const finalCommand = isYouTubeDownload 
-      ? `printf "y\n" | ${command}` // Send "y" and Enter to automatically answer any prompts
-      : command;
+    // Clean and prepare the command for execution
+    const finalCommand = command.trim();
 
-    console.log(`Executing command: ${finalCommand}`);
+    console.log(`Executing download command: ${finalCommand}`);
     
     // Simulate download progress
     const interval = setInterval(() => {
