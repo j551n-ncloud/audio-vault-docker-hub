@@ -10,8 +10,9 @@ import {
   Edit, Trash2, Save, File, FileAudio, 
   Folder, RefreshCw, Music, List, Check,
   Image, Download, AlertCircle, Search,
-  ChevronUp, FileImage
+  ChevronUp, FileImage, CheckCircle
 } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
