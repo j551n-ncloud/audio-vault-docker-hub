@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -64,7 +63,10 @@ export default function YoutubeDownloadTab({
     }
     
     const playlistOption = youtubeDownloadType === "playlist" ? "--yes-playlist" : "--no-playlist";
-    const command = `yt-dlp ${youtubeUrl} -x --audio-format mp3 --audio-quality ${audioBitrate}k ${thumbnailOptions} ${playlistOption} -o "${youtubeOutputDir}/%(title)s.%(ext)s"`;
+    
+    // Updated command to ensure proper audio extraction without merging formats
+    // Added -x flag before the URL to extract audio only and --audio-format mp3 to specify format
+    const command = `yt-dlp -x --audio-format mp3 --audio-quality ${audioBitrate}k ${thumbnailOptions} ${playlistOption} -o "${youtubeOutputDir}/%(title)s.%(ext)s" ${youtubeUrl}`;
     
     // Start download process
     startDownload({

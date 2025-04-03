@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ProcessInfo } from "@/components/downloads/StatusDisplay";
@@ -61,6 +60,16 @@ export function useDownloadStatus() {
     setDownloadComplete(false);
     setCurrentCommand(command);
 
+    // Check if it's a YouTube download (contains yt-dlp)
+    const isYouTubeDownload = command.includes("yt-dlp");
+    
+    // For YouTube downloads, modify command to auto-answer any prompts
+    const finalCommand = isYouTubeDownload 
+      ? `printf "y\n" | ${command}` // Send "y" and Enter to automatically answer any prompts
+      : command;
+
+    console.log(`Executing command: ${finalCommand}`);
+    
     // Simulate download progress
     const interval = setInterval(() => {
       setProgress((prev) => {
