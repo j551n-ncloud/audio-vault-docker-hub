@@ -1,7 +1,8 @@
 
-const express = require('express');
-const { exec } = require('child_process');
-const path = require('path');
+import express from 'express';
+import { exec } from 'child_process';
+import path from 'path';
+
 const app = express();
 
 // Enable CORS for our frontend
