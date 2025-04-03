@@ -31,7 +31,7 @@ EXPOSE 8080
 
 # Create directories with correct permissions
 RUN mkdir -p /app/downloads /audio /youtube /playlists \
-    && chown -R node:node /app/downloads /audio /youtube /playlists
+    && chown -R node:node /app /app/downloads /audio /youtube /playlists
 
 # Switch to non-root user
 USER node
