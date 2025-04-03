@@ -20,6 +20,8 @@ services:
       - OUTPUT_DIR=/audio
       - YOUTUBE_DIR=/youtube
       - THUMBNAILS_ENABLED=true
+      - PLAYLIST_DIR=/playlists
+      - SAVE_PLAYLISTS_WITH_AUDIO=true  # Flag to save playlists in the same folder as audio
     restart: unless-stopped
 
 volumes:

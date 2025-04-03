@@ -6,13 +6,19 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     python3 \
     python3-pip \
+    python3-venv \
+    python3-full \
     ffmpeg \
     python3-eyed3 \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Install spotdl and yt-dlp
-RUN pip3 install --no-cache-dir spotdl yt-dlp
+# Create and activate a virtual environment for Python packages
+RUN python3 -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Install spotdl and yt-dlp in the virtual environment
+RUN /opt/venv/bin/pip install --no-cache-dir spotdl yt-dlp
 
 # Set working directory
 WORKDIR /app
