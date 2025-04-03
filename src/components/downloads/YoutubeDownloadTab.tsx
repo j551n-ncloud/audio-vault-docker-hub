@@ -53,7 +53,7 @@ export default function YoutubeDownloadTab({
       return;
     }
 
-    // Generate command preview with thumbnail options
+    // Generate command preview with correct yt-dlp syntax
     let thumbnailOptions = "";
     if (embedThumbnails && writeAllThumbs) {
       thumbnailOptions = "--write-all-thumbnails --embed-thumbnail";

@@ -48,8 +48,8 @@ export default function SpotifyDownloadTab({ onCreatePlaylist, onEditCover }: Sp
       return;
     }
 
-    // Generate command preview - Note: removed the --embed-lyrics flag as it's not supported
-    const command = `spotdl ${spotifyUrl} --output "${outputDir}" --format mp3 --bitrate ${audioBitrate}k ${generateLyrics ? '--generate-lrc' : ''}`;
+    // Generate command preview using the correct spotdl syntax
+    const command = `spotdl download "${spotifyUrl}" --output "${outputDir}" --format mp3 --bitrate ${audioBitrate}k ${generateLyrics ? '--generate-lrc' : ''}`;
     
     // Start download process
     startDownload({
