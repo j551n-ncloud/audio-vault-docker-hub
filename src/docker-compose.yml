@@ -11,10 +11,10 @@ services:
     ports:
       - "3000:8080"  # Map to the correct port
     volumes:
-      - ./downloads:/app/downloads
-      - ./audio:/audio
-      - ./playlists:/playlists
-      - ./youtube:/youtube  # Separate folder for YouTube downloads
+      - downloads:/app/downloads
+      - audio:/audio
+      - playlists:/playlists
+      - youtube:/youtube
     environment:
       - NODE_ENV=production
       - OUTPUT_DIR=/audio

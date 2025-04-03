@@ -29,12 +29,8 @@ RUN npm run build
 # Expose port
 EXPOSE 8080
 
-# Create directories with correct permissions
-RUN mkdir -p /app/downloads /audio /youtube /playlists \
-    && chown -R node:node /app /app/downloads /audio /youtube /playlists
-
 # Switch to non-root user
 USER node
 
-# Start the application using the preview server instead of "start"
+# Start the application using the preview server
 CMD ["npm", "run", "preview", "--", "--host", "0.0.0.0", "--port", "8080"]
