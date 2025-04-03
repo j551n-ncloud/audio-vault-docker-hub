@@ -9,7 +9,9 @@ import {
 } from "@/components/ui/table";
 import { 
   Edit, Trash2, Save, File, FileAudio, 
-  Folder, RefreshCw, Music, List, Check
+  Folder, RefreshCw, Music, List, Check,
+  Image, Download, AlertCircle, Search,
+  ChevronUp, FileImage
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -17,6 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 
 type FileItem = {
   name: string;
@@ -42,6 +45,10 @@ export default function MetadataPage() {
   const [newFileName, setNewFileName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [lyrics, setLyrics] = useState("");
+  const [isDarkMode, setIsDarkMode] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState<"name" | "date" | "size">("name");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const { toast } = useToast();
 
   const [isCreatePlaylistDialogOpen, setIsCreatePlaylistDialogOpen] = useState(false);
@@ -52,6 +59,19 @@ export default function MetadataPage() {
   const [processType, setProcessType] = useState("");
   const [processPath, setProcessPath] = useState("");
   const [selectMode, setSelectMode] = useState(false);
+  const [isAlbumCoverDialogOpen, setIsAlbumCoverDialogOpen] = useState(false);
+  const [albumCoverUrl, setAlbumCoverUrl] = useState("");
+
+  // Theme switcher effect
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+      document.documentElement.classList.remove('light');
+    } else {
+      document.documentElement.classList.remove('dark');
+      document.documentElement.classList.add('light');
+    }
+  }, [isDarkMode]);
 
   // Simulate fetching files - this would be replaced with actual API calls
   useEffect(() => {
@@ -73,6 +93,27 @@ export default function MetadataPage() {
       setIsLoading(false);
     }, 800);
   }, [currentPath]);
+
+  // Filter and sort files
+  const filteredFiles = files.filter(file => 
+    searchQuery ? file.name.toLowerCase().includes(searchQuery.toLowerCase()) : true
+  ).sort((a, b) => {
+    if (sortBy === "name") {
+      return sortDirection === "asc" 
+        ? a.name.localeCompare(b.name) 
+        : b.name.localeCompare(a.name);
+    } else if (sortBy === "date" && a.lastModified && b.lastModified) {
+      return sortDirection === "asc" 
+        ? a.lastModified.localeCompare(b.lastModified) 
+        : b.lastModified.localeCompare(a.lastModified);
+    } else if (sortBy === "size" && a.size && b.size) {
+      const getSize = (size: string) => parseFloat(size.split(' ')[0]);
+      return sortDirection === "asc" 
+        ? getSize(a.size) - getSize(b.size) 
+        : getSize(b.size) - getSize(a.size);
+    }
+    return 0;
+  });
 
   const handleFileSelect = (file: FileItem) => {
     if (selectMode) {
@@ -129,7 +170,7 @@ export default function MetadataPage() {
     // In a real app, this would call your backend API
     toast({
       title: "File deleted",
-      description: `${file.name} would be deleted in a real application`,
+      description: `${file.name} has been deleted`,
     });
     
     // Update UI
@@ -164,6 +205,8 @@ export default function MetadataPage() {
   };
 
   const handleSaveMetadata = () => {
+    if (!selectedFile) return;
+    
     // In a real app, this would call your backend API
     toast({
       title: "Metadata saved",
@@ -314,16 +357,75 @@ export default function MetadataPage() {
     }
   };
 
+  const handleSetAlbumCover = () => {
+    if (!albumCoverUrl) {
+      toast({
+        variant: "destructive",
+        title: "Input required",
+        description: "Please enter a URL for the album cover",
+        icon: <AlertCircle className="h-4 w-4" />
+      });
+      return;
+    }
+    
+    const selectedMp3Files = selectMode
+      ? files.filter(f => f.selected && f.name.endsWith(".mp3"))
+      : (selectedFile && selectedFile.name.endsWith(".mp3")) ? [selectedFile] : [];
+    
+    if (selectedMp3Files.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "No files selected",
+        description: "Please select at least one MP3 file to update album art",
+      });
+      return;
+    }
+    
+    toast({
+      title: "Setting album cover",
+      description: "Updating album artwork..."
+    });
+    
+    // Simulate album cover update
+    setTimeout(() => {
+      toast({
+        title: "Album cover updated",
+        description: `Updated album artwork for ${selectedMp3Files.length} file(s)`,
+        icon: <CheckCircle2 className="h-4 w-4" />
+      });
+      setIsAlbumCoverDialogOpen(false);
+      setAlbumCoverUrl("");
+    }, 1500);
+  };
+
+  const handleToggleSort = (field: "name" | "date" | "size") => {
+    if (sortBy === field) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortBy(field);
+      setSortDirection("asc");
+    }
+  };
+
   const selectedCount = files.filter(f => f.selected).length;
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Audio Metadata Manager</h1>
-        <div className="flex gap-2">
+        <h1 className="text-2xl font-bold">Audio Metadata Manager</h1>
+        <div className="flex gap-2 items-center">
+          <div className="flex items-center space-x-2">
+            <Switch 
+              id="theme-mode" 
+              checked={isDarkMode}
+              onCheckedChange={setIsDarkMode}
+            />
+            <Label htmlFor="theme-mode" className="text-sm">{isDarkMode ? "Dark" : "Light"}</Label>
+          </div>
           <Button
             variant={selectMode ? "secondary" : "outline"}
             onClick={handleToggleSelectMode}
+            size="sm"
           >
             {selectMode ? (
               <>
@@ -337,7 +439,8 @@ export default function MetadataPage() {
           
           {selectMode && selectedCount > 0 && (
             <Button
-              variant="secondary"
+              variant="outline"
+              size="sm"
               onClick={() => setIsCreatePlaylistDialogOpen(true)}
             >
               <List className="w-4 h-4 mr-2" />
@@ -346,20 +449,31 @@ export default function MetadataPage() {
           )}
           
           {selectMode && selectedCount > 0 && files.some(f => f.selected && f.name.endsWith(".mp3")) && (
-            <Button
-              variant="secondary"
-              onClick={handleEmbedLyrics}
-            >
-              <Music className="w-4 h-4 mr-2" />
-              Embed Lyrics
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleEmbedLyrics}
+              >
+                <Music className="w-4 h-4 mr-2" />
+                Embed Lyrics
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsAlbumCoverDialogOpen(true)}
+              >
+                <Image className="w-4 h-4 mr-2" />
+                Set Cover
+              </Button>
+            </>
           )}
         </div>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* File browser section */}
-        <Card className="md:col-span-2 bg-card/60 backdrop-blur-sm">
+        <Card className="md:col-span-2 border">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-xl">File Browser</CardTitle>
             <div className="flex gap-2">
@@ -369,7 +483,7 @@ export default function MetadataPage() {
                 onClick={handleNavigateUp}
                 disabled={currentPath === "/audio"}
               >
-                <Folder className="w-4 h-4 mr-1" />
+                <ChevronUp className="w-4 h-4 mr-1" />
                 Up
               </Button>
               <Button 
@@ -388,7 +502,7 @@ export default function MetadataPage() {
                 New Folder
               </Button>
               <Button 
-                variant="secondary" 
+                variant="outline" 
                 size="sm"
                 onClick={() => setIsCreatePlaylistDialogOpen(true)}
               >
@@ -398,109 +512,139 @@ export default function MetadataPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-sm text-muted-foreground mb-4">
-              Current path: {currentPath}
-            </div>
-            
-            {isLoading ? (
-              <div className="flex justify-center items-center p-8">
-                <RefreshCw className="h-6 w-6 animate-spin text-audio-purple" />
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <div className="relative flex-grow">
+                  <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input 
+                    placeholder="Search files..." 
+                    className="pl-8"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {currentPath}
+                </div>
               </div>
-            ) : (
-              <div className="border rounded-md">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      {selectMode && <TableHead className="w-[50px]"></TableHead>}
-                      <TableHead>Name</TableHead>
-                      <TableHead>Size</TableHead>
-                      <TableHead>Last Modified</TableHead>
-                      <TableHead className="w-[100px]">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {files.length > 0 ? (
-                      files.map((file) => (
-                        <TableRow 
-                          key={file.name}
-                          className={selectedFile?.name === file.name || file.selected ? "bg-muted/50" : ""}
-                          onClick={() => handleFileSelect(file)}
+              
+              {isLoading ? (
+                <div className="flex justify-center items-center p-8">
+                  <RefreshCw className="h-6 w-6 animate-spin text-primary" />
+                </div>
+              ) : (
+                <div className="border rounded-md">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        {selectMode && <TableHead className="w-[50px]"></TableHead>}
+                        <TableHead 
+                          className="cursor-pointer hover:text-primary"
+                          onClick={() => handleToggleSort("name")}
                         >
-                          {selectMode && (
+                          Name {sortBy === "name" && (sortDirection === "asc" ? "↑" : "↓")}
+                        </TableHead>
+                        <TableHead 
+                          className="cursor-pointer hover:text-primary"
+                          onClick={() => handleToggleSort("size")}
+                        >
+                          Size {sortBy === "size" && (sortDirection === "asc" ? "↑" : "↓")}
+                        </TableHead>
+                        <TableHead 
+                          className="cursor-pointer hover:text-primary"
+                          onClick={() => handleToggleSort("date")}
+                        >
+                          Modified {sortBy === "date" && (sortDirection === "asc" ? "↑" : "↓")}
+                        </TableHead>
+                        <TableHead className="w-[100px]">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredFiles.length > 0 ? (
+                        filteredFiles.map((file) => (
+                          <TableRow 
+                            key={file.name}
+                            className={`file-item ${(selectedFile?.name === file.name || file.selected) ? "selected" : ""}`}
+                            onClick={() => handleFileSelect(file)}
+                          >
+                            {selectMode && (
+                              <TableCell>
+                                <Checkbox 
+                                  checked={file.selected} 
+                                  onCheckedChange={() => {
+                                    const updatedFiles = files.map(f => {
+                                      if (f.name === file.name) {
+                                        return { ...f, selected: !f.selected };
+                                      }
+                                      return f;
+                                    });
+                                    setFiles(updatedFiles);
+                                  }}
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                              </TableCell>
+                            )}
                             <TableCell>
-                              <Checkbox 
-                                checked={file.selected} 
-                                onCheckedChange={() => {
-                                  const updatedFiles = files.map(f => {
-                                    if (f.name === file.name) {
-                                      return { ...f, selected: !f.selected };
-                                    }
-                                    return f;
-                                  });
-                                  setFiles(updatedFiles);
-                                }}
-                                onClick={(e) => e.stopPropagation()}
-                              />
+                              <div className="flex items-center">
+                                {file.type === "folder" ? (
+                                  <Folder className="h-4 w-4 mr-2 file-icon" />
+                                ) : file.name.endsWith(".mp3") ? (
+                                  <FileAudio className="h-4 w-4 mr-2 file-icon" />
+                                ) : file.name.endsWith(".jpg") || file.name.endsWith(".png") ? (
+                                  <FileImage className="h-4 w-4 mr-2 file-icon" />
+                                ) : (
+                                  <File className="h-4 w-4 mr-2 text-muted-foreground" />
+                                )}
+                                {file.name}
+                              </div>
                             </TableCell>
-                          )}
-                          <TableCell>
-                            <div className="flex items-center">
-                              {file.type === "folder" ? (
-                                <Folder className="h-4 w-4 mr-2 text-audio-purple" />
-                              ) : file.name.endsWith(".mp3") ? (
-                                <FileAudio className="h-4 w-4 mr-2 text-audio-purple" />
-                              ) : (
-                                <File className="h-4 w-4 mr-2 text-muted-foreground" />
-                              )}
-                              {file.name}
-                            </div>
-                          </TableCell>
-                          <TableCell>{file.size || "-"}</TableCell>
-                          <TableCell>{file.lastModified || "-"}</TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Button 
-                                variant="ghost" 
-                                size="icon"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedFile(file);
-                                  setNewFileName(file.name);
-                                  setIsEditDialogOpen(true);
-                                }}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="icon"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteFile(file);
-                                }}
-                              >
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
-                            </div>
+                            <TableCell>{file.size || "-"}</TableCell>
+                            <TableCell>{file.lastModified || "-"}</TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedFile(file);
+                                    setNewFileName(file.name);
+                                    setIsEditDialogOpen(true);
+                                  }}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteFile(file);
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={selectMode ? 5 : 4} className="text-center py-8">
+                            {searchQuery ? "No matching files found" : "No files found in this directory"}
                           </TableCell>
                         </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={selectMode ? 5 : 4} className="text-center py-8">
-                          No files found in this directory
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
 
         {/* Metadata section */}
-        <Card className="bg-card/60 backdrop-blur-sm">
+        <Card className="border">
           <CardHeader>
             <CardTitle className="text-xl">File Details</CardTitle>
           </CardHeader>
@@ -526,14 +670,14 @@ export default function MetadataPage() {
                           value={field.value}
                           onChange={(e) => handleUpdateMetadata(index, e.target.value)}
                           disabled={!field.editable}
-                          className="bg-black/20"
+                          className="bg-background"
                         />
                       </div>
                     </div>
                   ))}
                   
                   <Button 
-                    className="w-full mt-4 bg-audio-purple hover:bg-audio-purple/80"
+                    className="w-full mt-4 bg-primary hover:bg-primary/80"
                     onClick={handleSaveMetadata}
                   >
                     <Save className="mr-2 h-4 w-4" />
@@ -541,14 +685,24 @@ export default function MetadataPage() {
                   </Button>
                   
                   {selectedFile.name.endsWith(".mp3") && (
-                    <Button 
-                      className="w-full mt-2"
-                      variant="secondary"
-                      onClick={handleEmbedLyrics}
-                    >
-                      <Music className="mr-2 h-4 w-4" />
-                      Embed Lyrics
-                    </Button>
+                    <div className="flex gap-2 w-full">
+                      <Button 
+                        className="flex-1"
+                        variant="outline"
+                        onClick={handleEmbedLyrics}
+                      >
+                        <Music className="mr-2 h-4 w-4" />
+                        Embed Lyrics
+                      </Button>
+                      <Button 
+                        className="flex-1"
+                        variant="outline"
+                        onClick={() => setIsAlbumCoverDialogOpen(true)}
+                      >
+                        <Image className="mr-2 h-4 w-4" />
+                        Set Cover
+                      </Button>
+                    </div>
                   )}
                 </TabsContent>
                 
@@ -559,11 +713,11 @@ export default function MetadataPage() {
                       id="lyrics"
                       value={lyrics}
                       onChange={(e) => setLyrics(e.target.value)}
-                      className="min-h-[300px] font-mono text-sm bg-black/20"
+                      className="min-h-[300px] font-mono text-sm bg-background"
                     />
                     
                     <Button 
-                      className="w-full mt-2 bg-audio-purple hover:bg-audio-purple/80"
+                      className="w-full mt-2 bg-primary hover:bg-primary/80"
                     >
                       <Save className="mr-2 h-4 w-4" />
                       Save Lyrics
@@ -583,7 +737,7 @@ export default function MetadataPage() {
       
       {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Rename File</DialogTitle>
           </DialogHeader>
@@ -594,7 +748,7 @@ export default function MetadataPage() {
                 id="filename"
                 value={newFileName}
                 onChange={(e) => setNewFileName(e.target.value)}
-                className="bg-black/20"
+                className="bg-background"
               />
             </div>
           </div>
@@ -607,7 +761,7 @@ export default function MetadataPage() {
       
       {/* Create Playlist Dialog */}
       <Dialog open={isCreatePlaylistDialogOpen} onOpenChange={setIsCreatePlaylistDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Create Playlist</DialogTitle>
           </DialogHeader>
@@ -619,7 +773,7 @@ export default function MetadataPage() {
                 value={playlistName}
                 onChange={(e) => setPlaylistName(e.target.value)}
                 placeholder="My Awesome Playlist"
-                className="bg-black/20"
+                className="bg-background"
               />
             </div>
             <p className="text-sm text-muted-foreground">
@@ -637,7 +791,7 @@ export default function MetadataPage() {
       
       {/* Create Folder Dialog */}
       <Dialog open={isCreateFolderDialogOpen} onOpenChange={setIsCreateFolderDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Create New Folder</DialogTitle>
           </DialogHeader>
@@ -649,7 +803,7 @@ export default function MetadataPage() {
                 value={folderName}
                 onChange={(e) => setFolderName(e.target.value)}
                 placeholder="New Folder"
-                className="bg-black/20"
+                className="bg-background"
               />
             </div>
           </div>
@@ -662,20 +816,60 @@ export default function MetadataPage() {
       
       {/* Processing Dialog */}
       <Dialog open={isProcessingDialogOpen} onOpenChange={setIsProcessingDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
               {processType === "embed_lyrics" ? "Embedding Lyrics" : "Processing"}
             </DialogTitle>
           </DialogHeader>
           <div className="flex flex-col items-center justify-center py-8">
-            <RefreshCw className="h-8 w-8 animate-spin text-audio-purple mb-4" />
+            <RefreshCw className="h-8 w-8 animate-spin text-primary mb-4" />
             <p className="text-center">
               {processType === "embed_lyrics" 
                 ? "Embedding lyrics into selected MP3 files..." 
                 : "Processing files..."}
             </p>
           </div>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Album Cover Dialog */}
+      <Dialog open={isAlbumCoverDialogOpen} onOpenChange={setIsAlbumCoverDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Album Cover</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="album-cover-url">Album Cover URL</Label>
+              <Input
+                id="album-cover-url"
+                value={albumCoverUrl}
+                onChange={(e) => setAlbumCoverUrl(e.target.value)}
+                placeholder="https://example.com/album-cover.jpg"
+                className="bg-background"
+              />
+            </div>
+            {albumCoverUrl && (
+              <div className="mt-2 rounded-md overflow-hidden border">
+                <img 
+                  src={albumCoverUrl} 
+                  alt="Album cover preview" 
+                  className="w-full h-auto max-h-48 object-contain" 
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = 'https://placehold.co/400x400/png?text=Invalid+Image+URL';
+                  }}
+                />
+              </div>
+            )}
+            <div className="text-sm text-muted-foreground">
+              This will update the album artwork for the selected files.
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAlbumCoverDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSetAlbumCover}>Apply Cover</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

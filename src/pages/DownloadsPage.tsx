@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Download, Music, Youtube, AlertCircle, Folder, List, CheckCircle2, Image } from "lucide-react";
+import { Download, Music, Youtube, AlertCircle, Folder, List, CheckCircle2, Image, Settings } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -28,8 +28,13 @@ export default function DownloadsPage() {
   const [playlistName, setPlaylistName] = useState("");
   const [folderName, setFolderName] = useState("");
   const [downloadType, setDownloadType] = useState<"single" | "playlist">("single");
-  const [thumbnailOption, setThumbnailOption] = useState<"embed" | "write" | "write-all" | "none">("embed");
+  const [isProfileDialogOpen, setIsProfileDialogOpen] = useState(false);
+  const [email, setEmail] = useState("admin@example.com");
+  const [password, setPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
   const [isDarkMode, setIsDarkMode] = useState(true);
+  const [albumCoverUrl, setAlbumCoverUrl] = useState("");
+  const [isAlbumCoverDialogOpen, setIsAlbumCoverDialogOpen] = useState(false);
 
   const { toast } = useToast();
 
@@ -66,11 +71,20 @@ export default function DownloadsPage() {
           clearInterval(interval);
           setIsDownloading(false);
           setDownloadComplete(true);
+          
           toast({
             title: "Download complete",
             description: "Your audio files have been downloaded successfully",
             icon: <CheckCircle2 className="h-4 w-4" />
           });
+          
+          // If it's a playlist download, prompt to create a playlist
+          if (downloadType === "playlist") {
+            setTimeout(() => {
+              setIsCreatePlaylistDialogOpen(true);
+            }, 500);
+          }
+          
           return 100;
         }
         return prev + 2;
@@ -93,7 +107,7 @@ export default function DownloadsPage() {
     setProgress(0);
     setDownloadComplete(false);
 
-    // Simulate download progress
+    // Simulate download progress with combined thumbnail options
     const interval = setInterval(() => {
       setProgress((prev) => {
         if (prev >= 100) {
@@ -102,7 +116,7 @@ export default function DownloadsPage() {
           setDownloadComplete(true);
           toast({
             title: "Download complete",
-            description: "Your audio has been downloaded successfully",
+            description: "Your audio with thumbnails has been downloaded successfully",
             icon: <CheckCircle2 className="h-4 w-4" />
           });
           return 100;
@@ -185,13 +199,68 @@ export default function DownloadsPage() {
     }, 1000);
   };
 
-  const getThumbnailOptionValue = () => {
-    switch(thumbnailOption) {
-      case "embed": return "--embed-thumbnail";
-      case "write": return "--write-thumbnail";
-      case "write-all": return "--write-all-thumbnails";
-      default: return "";
+  const handleUpdateProfile = () => {
+    if (!password) {
+      toast({
+        variant: "destructive",
+        title: "Input required",
+        description: "Please enter your current password to make changes",
+        icon: <AlertCircle className="h-4 w-4" />
+      });
+      return;
     }
+    
+    toast({
+      title: "Updating profile",
+      description: "Processing your changes..."
+    });
+    
+    // Simulate profile update
+    setTimeout(() => {
+      toast({
+        title: "Profile updated",
+        description: "Your profile has been updated successfully",
+        icon: <CheckCircle2 className="h-4 w-4" />
+      });
+      setIsProfileDialogOpen(false);
+      // Only update email if it was changed
+      if (password === "password123" && newPassword) {
+        toast({
+          title: "Password changed",
+          description: "Your password has been updated successfully"
+        });
+      }
+      setPassword("");
+      setNewPassword("");
+    }, 1500);
+  };
+
+  const handleSetAlbumCover = () => {
+    if (!albumCoverUrl) {
+      toast({
+        variant: "destructive",
+        title: "Input required",
+        description: "Please enter a URL for the album cover",
+        icon: <AlertCircle className="h-4 w-4" />
+      });
+      return;
+    }
+    
+    toast({
+      title: "Setting album cover",
+      description: "Updating album artwork..."
+    });
+    
+    // Simulate album cover update
+    setTimeout(() => {
+      toast({
+        title: "Album cover updated",
+        description: "Album artwork has been updated successfully",
+        icon: <CheckCircle2 className="h-4 w-4" />
+      });
+      setIsAlbumCoverDialogOpen(false);
+      setAlbumCoverUrl("");
+    }, 1500);
   };
 
   return (
@@ -200,13 +269,12 @@ export default function DownloadsPage() {
         <h1 className="text-2xl font-medium">Audio Downloader</h1>
         <div className="flex gap-2 items-center">
           <div className="flex items-center space-x-2">
-            <Label htmlFor="theme-mode" className="text-sm">Dark</Label>
             <Switch 
               id="theme-mode" 
               checked={isDarkMode}
               onCheckedChange={setIsDarkMode}
             />
-            <Label htmlFor="theme-mode" className="text-sm">Light</Label>
+            <Label htmlFor="theme-mode" className="text-sm">{isDarkMode ? "Dark" : "Light"}</Label>
           </div>
           <Button 
             variant="outline" 
@@ -216,10 +284,18 @@ export default function DownloadsPage() {
             <Folder className="mr-2 h-4 w-4" />
             New Folder
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsProfileDialogOpen(true)}
+          >
+            <Settings className="mr-2 h-4 w-4" />
+            Profile
+          </Button>
         </div>
       </div>
 
-      <div className="bg-card shadow-md rounded-lg overflow-hidden">
+      <div className="bg-card shadow-sm rounded-lg overflow-hidden border">
         <Tabs defaultValue="spotify" className="w-full">
           <TabsList className="w-full justify-start bg-muted border-b px-3">
             <TabsTrigger value="spotify" className="flex items-center gap-2 data-[state=active]:border-b-2 data-[state=active]:border-primary">
@@ -359,16 +435,18 @@ export default function DownloadsPage() {
                     {isDownloading ? "Downloading..." : "Download"}
                   </Button>
                   
-                  {downloadComplete && downloadType === "playlist" && (
+                  {downloadComplete && (
                     <div className="flex w-full gap-2 mt-2">
-                      <Button 
-                        variant="outline" 
-                        className="flex-1"
-                        onClick={() => setIsCreatePlaylistDialogOpen(true)}
-                      >
-                        <List className="mr-2 h-4 w-4" />
-                        Create Playlist
-                      </Button>
+                      {downloadType === "playlist" && (
+                        <Button 
+                          variant="outline" 
+                          className="flex-1"
+                          onClick={() => setIsCreatePlaylistDialogOpen(true)}
+                        >
+                          <List className="mr-2 h-4 w-4" />
+                          Create Playlist
+                        </Button>
+                      )}
                       
                       {generateLyrics && !embedLyrics && (
                         <Button 
@@ -380,6 +458,15 @@ export default function DownloadsPage() {
                           Embed Lyrics
                         </Button>
                       )}
+                      
+                      <Button 
+                        variant="outline" 
+                        className="flex-1"
+                        onClick={() => setIsAlbumCoverDialogOpen(true)}
+                      >
+                        <Image className="mr-2 h-4 w-4" />
+                        Edit Cover
+                      </Button>
                     </div>
                   )}
                 </div>
@@ -435,23 +522,9 @@ export default function DownloadsPage() {
                   </div>
                 </div>
                 
-                <div className="flex flex-col space-y-2">
-                  <Label htmlFor="thumbnail-option">Thumbnail Option</Label>
-                  <Select 
-                    defaultValue="embed" 
-                    onValueChange={(value) => setThumbnailOption(value as any)}
-                    disabled={isDownloading}
-                  >
-                    <SelectTrigger className="bg-background border">
-                      <SelectValue placeholder="Select thumbnail option" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="embed">Embed thumbnail</SelectItem>
-                      <SelectItem value="write">Write thumbnail</SelectItem>
-                      <SelectItem value="write-all">Write all thumbnails</SelectItem>
-                      <SelectItem value="none">No thumbnail</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="flex items-center mt-2 mb-2">
+                  <p className="text-sm font-medium">Automatically write and embed thumbnails</p>
+                  <div className="flex-grow border-t border-border ml-2"></div>
                 </div>
                 
                 {isDownloading && (
@@ -471,18 +544,29 @@ export default function DownloadsPage() {
                     disabled={isDownloading}
                   >
                     <Download className="mr-2 h-4 w-4" />
-                    {isDownloading ? "Downloading..." : "Download"}
+                    {isDownloading ? "Downloading..." : "Download with Thumbnails"}
                   </Button>
                   
                   {downloadComplete && (
-                    <Button 
-                      variant="outline" 
-                      className="w-full mt-2"
-                      onClick={() => setIsCreatePlaylistDialogOpen(true)}
-                    >
-                      <List className="mr-2 h-4 w-4" />
-                      Create Playlist
-                    </Button>
+                    <div className="flex w-full gap-2 mt-2">
+                      <Button 
+                        variant="outline" 
+                        className="flex-1"
+                        onClick={() => setIsCreatePlaylistDialogOpen(true)}
+                      >
+                        <List className="mr-2 h-4 w-4" />
+                        Create Playlist
+                      </Button>
+                      
+                      <Button 
+                        variant="outline" 
+                        className="flex-1"
+                        onClick={() => setIsAlbumCoverDialogOpen(true)}
+                      >
+                        <Image className="mr-2 h-4 w-4" />
+                        Edit Cover
+                      </Button>
+                    </div>
                   )}
                 </div>
               </CardContent>
@@ -493,7 +577,7 @@ export default function DownloadsPage() {
       
       {/* Create Playlist Dialog */}
       <Dialog open={isCreatePlaylistDialogOpen} onOpenChange={setIsCreatePlaylistDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Create Playlist</DialogTitle>
           </DialogHeader>
@@ -527,7 +611,7 @@ export default function DownloadsPage() {
 
       {/* Create Folder Dialog */}
       <Dialog open={isCreateFolderDialogOpen} onOpenChange={setIsCreateFolderDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Create New Folder</DialogTitle>
           </DialogHeader>
@@ -555,6 +639,93 @@ export default function DownloadsPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsCreateFolderDialogOpen(false)}>Cancel</Button>
             <Button onClick={handleCreateFolder}>Create</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* User Profile Dialog */}
+      <Dialog open={isProfileDialogOpen} onOpenChange={setIsProfileDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Profile Settings</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="user-email">Email</Label>
+              <Input
+                id="user-email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="bg-background border"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="current-password">Current Password</Label>
+              <Input
+                id="current-password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter your current password"
+                className="bg-background border"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-password">New Password (leave empty to keep current)</Label>
+              <Input
+                id="new-password"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Enter new password"
+                className="bg-background border"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsProfileDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleUpdateProfile}>Update Profile</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Album Cover Dialog */}
+      <Dialog open={isAlbumCoverDialogOpen} onOpenChange={setIsAlbumCoverDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Album Cover</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="album-cover-url">Album Cover URL</Label>
+              <Input
+                id="album-cover-url"
+                value={albumCoverUrl}
+                onChange={(e) => setAlbumCoverUrl(e.target.value)}
+                placeholder="https://example.com/album-cover.jpg"
+                className="bg-background border"
+              />
+            </div>
+            {albumCoverUrl && (
+              <div className="mt-2 rounded-md overflow-hidden border">
+                <img 
+                  src={albumCoverUrl} 
+                  alt="Album cover preview" 
+                  className="w-full h-auto max-h-48 object-contain" 
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = 'https://placehold.co/400x400/png?text=Invalid+Image+URL';
+                  }}
+                />
+              </div>
+            )}
+            <div className="text-sm text-muted-foreground">
+              This will apply to selected or recently downloaded files.
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAlbumCoverDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSetAlbumCover}>Apply Cover</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
