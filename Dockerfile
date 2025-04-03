@@ -26,6 +26,9 @@ COPY . .
 # Build the application
 RUN npm run build
 
+# Set proper permissions for the node user
+RUN chown -R node:node /app
+
 # Expose port
 EXPOSE 8080
 
