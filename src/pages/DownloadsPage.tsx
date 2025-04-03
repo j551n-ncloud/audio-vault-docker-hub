@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Download, Music, Youtube, AlertCircle, Folder, List, CheckCircle2, Image, Settings, Upload, Terminal } from "lucide-react";
+import { Download, Music, Youtube, AlertCircle, Folder, List, CheckCircle2, Image, Settings, Upload, Terminal, PlaySquare } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -27,14 +27,16 @@ export default function DownloadsPage() {
   const [spotifyUrl, setSpotifyUrl] = useState("");
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [outputDir, setOutputDir] = useState("/audio");
+  const [youtubeOutputDir, setYoutubeOutputDir] = useState("/youtube");
   const [isDownloading, setIsDownloading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [generateLyrics, setGenerateLyrics] = useState(true);
   const [embedLyrics, setEmbedLyrics] = useState(true);
   const [embedThumbnails, setEmbedThumbnails] = useState(true);
-  const [audioBitrate, setAudioBitrate] = useState("320");
+  const [writeAllThumbs, setWriteAllThumbs] = useState(false);
   const [downloadComplete, setDownloadComplete] = useState(false);
   const [downloadType, setDownloadType] = useState<"single" | "playlist">("single");
+  const [youtubeDownloadType, setYoutubeDownloadType] = useState<"single" | "playlist">("single");
   const [isDarkMode, setIsDarkMode] = useState(() => {
     // Check localStorage first, then fallback to checking document class
     const savedMode = localStorage.getItem("theme");
@@ -54,6 +56,7 @@ export default function DownloadsPage() {
   const [isCreateFolderDialogOpen, setIsCreateFolderDialogOpen] = useState(false);
   const [isProfileDialogOpen, setIsProfileDialogOpen] = useState(false);
   const [isAlbumCoverDialogOpen, setIsAlbumCoverDialogOpen] = useState(false);
+  const [isCreateYoutubeFolderDialogOpen, setIsCreateYoutubeFolderDialogOpen] = useState(false);
   
   // User profile states
   const [email, setEmail] = useState("admin@example.com");
@@ -61,6 +64,7 @@ export default function DownloadsPage() {
   const [newPassword, setNewPassword] = useState("");
   const [playlistName, setPlaylistName] = useState("");
   const [folderName, setFolderName] = useState("");
+  const [youtubeFolderName, setYoutubeFolderName] = useState("");
   
   // Process status tracking
   const [downloadStatus, setDownloadStatus] = useState<ProcessInfo>({
@@ -98,6 +102,20 @@ export default function DownloadsPage() {
       localStorage.setItem("theme", "light");
     }
   }, [isDarkMode]);
+
+  // Apply theme on page load and when navigating between pages
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("theme") || "light";
+    if (savedTheme === "dark") {
+      document.documentElement.classList.add('dark');
+      document.documentElement.classList.remove('light');
+      setIsDarkMode(true);
+    } else {
+      document.documentElement.classList.remove('dark');
+      document.documentElement.classList.add('light');
+      setIsDarkMode(false);
+    }
+  }, []);
 
   // File input handlers for album cover upload
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -152,7 +170,7 @@ export default function DownloadsPage() {
     setDownloadComplete(false);
     
     // Generate command preview
-    const command = `spotdl ${spotifyUrl} --output ${outputDir} --format mp3 --bitrate ${audioBitrate}k ${generateLyrics ? '--generate-lyrics' : ''} ${embedLyrics ? '--embed-lyrics' : ''}`;
+    const command = `spotdl ${spotifyUrl} --output "${outputDir}" --format mp3 --bitrate ${audioBitrate}k ${generateLyrics ? '--generate-lrc' : ''} ${embedLyrics ? '--embed-lyrics' : ''}`;
     setCurrentCommand(command);
 
     // Simulate download progress
@@ -237,8 +255,18 @@ export default function DownloadsPage() {
     setProgress(0);
     setDownloadComplete(false);
     
-    // Generate command preview with thumbnail option
-    const command = `yt-dlp ${youtubeUrl} -x --audio-format mp3 --audio-quality ${audioBitrate}k ${embedThumbnails ? '--embed-thumbnail' : ''} -o "${outputDir}/%(title)s.%(ext)s"`;
+    // Generate command preview with thumbnail options
+    let thumbnailOptions = "";
+    if (embedThumbnails && writeAllThumbs) {
+      thumbnailOptions = "--write-all-thumbnails --embed-thumbnail";
+    } else if (embedThumbnails) {
+      thumbnailOptions = "--embed-thumbnail";
+    } else if (writeAllThumbs) {
+      thumbnailOptions = "--write-all-thumbnails";
+    }
+    
+    const playlistOption = youtubeDownloadType === "playlist" ? "--yes-playlist" : "--no-playlist";
+    const command = `yt-dlp ${youtubeUrl} -x --audio-format mp3 --audio-quality ${audioBitrate}k ${thumbnailOptions} ${playlistOption} -o "${youtubeOutputDir}/%(title)s.%(ext)s"`;
     setCurrentCommand(command);
 
     // Simulate download progress
@@ -264,8 +292,22 @@ export default function DownloadsPage() {
           });
           
           // If embedding thumbnails, update status
-          if (embedThumbnails) {
+          if (embedThumbnails || writeAllThumbs) {
             simulateEmbedThumbnails();
+          }
+
+          // If it's a playlist download, update playlist status
+          if (youtubeDownloadType === "playlist") {
+            setPlaylistStatus({
+              status: "active",
+              progress: 0,
+              message: "Ready to create playlist"
+            });
+            
+            // Auto-open playlist dialog
+            setTimeout(() => {
+              setIsCreatePlaylistDialogOpen(true);
+            }, 500);
           }
           
           toast({
@@ -377,7 +419,8 @@ export default function DownloadsPage() {
     });
     
     // Generate command for the playlist creation
-    const playlistCommand = `find "${outputDir}" -name "*.mp3" > "${outputDir}/${playlistName}.m3u"`;
+    const currentDir = Tabs.value === "youtube" ? youtubeOutputDir : outputDir;
+    const playlistCommand = `find "${currentDir}" -name "*.mp3" > "${currentDir}/${playlistName}.m3u"`;
     setCurrentCommand(playlistCommand);
     
     // Simulate playlist creation with progress
@@ -390,7 +433,7 @@ export default function DownloadsPage() {
           
           toast({
             title: "Playlist created",
-            description: `${playlistName}.m3u has been created in ${outputDir}`,
+            description: `${playlistName}.m3u has been created in ${currentDir}`,
             icon: <CheckCircle2 className="h-4 w-4" />
           });
           
@@ -442,6 +485,38 @@ export default function DownloadsPage() {
       setIsCreateFolderDialogOpen(false);
       setOutputDir(`${outputDir}/${folderName}`);
       setFolderName("");
+    }, 1000);
+  };
+
+  const handleCreateYoutubeFolder = () => {
+    if (!youtubeFolderName) {
+      toast({
+        variant: "destructive",
+        title: "Input required",
+        description: "Please enter a folder name",
+        icon: <AlertCircle className="h-4 w-4" />
+      });
+      return;
+    }
+    
+    toast({
+      title: "Creating YouTube folder",
+      description: `Creating folder: ${youtubeFolderName}`
+    });
+    
+    // Display the command
+    setCurrentCommand(`mkdir -p "${youtubeOutputDir}/${youtubeFolderName}"`);
+    
+    // Simulate folder creation
+    setTimeout(() => {
+      toast({
+        title: "YouTube folder created",
+        description: `${youtubeFolderName} has been created at ${youtubeOutputDir}/${youtubeFolderName}`,
+        icon: <CheckCircle2 className="h-4 w-4" />
+      });
+      setIsCreateYoutubeFolderDialogOpen(false);
+      setYoutubeOutputDir(`${youtubeOutputDir}/${youtubeFolderName}`);
+      setYoutubeFolderName("");
     }, 1000);
   };
 
@@ -550,6 +625,9 @@ export default function DownloadsPage() {
       )}
     </div>
   );
+
+  // Audio bitrate variable
+  const [audioBitrate, setAudioBitrate] = useState("320");
 
   return (
     <div className="p-4 md:p-6 max-w-4xl mx-auto">
@@ -737,16 +815,14 @@ export default function DownloadsPage() {
                   
                   {downloadComplete && (
                     <div className="flex w-full gap-2 mt-2">
-                      {downloadType === "playlist" && (
-                        <Button 
-                          variant="outline" 
-                          className="flex-1"
-                          onClick={() => setIsCreatePlaylistDialogOpen(true)}
-                        >
-                          <List className="mr-2 h-4 w-4" />
-                          Create Playlist
-                        </Button>
-                      )}
+                      <Button 
+                        variant="outline" 
+                        className="flex-1"
+                        onClick={() => setIsCreatePlaylistDialogOpen(true)}
+                      >
+                        <List className="mr-2 h-4 w-4" />
+                        Create Playlist
+                      </Button>
                       
                       {generateLyrics && !embedLyrics && (
                         <Button 
@@ -777,29 +853,22 @@ export default function DownloadsPage() {
           <TabsContent value="youtube" className="p-6">
             <Card className="border-none shadow-none">
               <CardContent className="space-y-4 p-0">
-                <div className="flex flex-col space-y-2">
-                  <Label htmlFor="youtube-url">YouTube URL</Label>
-                  <Input
-                    id="youtube-url"
-                    placeholder="https://www.youtube.com/watch?v=..."
-                    className="bg-background border"
-                    value={youtubeUrl}
-                    onChange={(e) => setYoutubeUrl(e.target.value)}
-                    disabled={isDownloading}
-                  />
-                </div>
-                
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="flex flex-col space-y-2">
-                    <Label htmlFor="output-dir-yt">Output Directory</Label>
-                    <Input
-                      id="output-dir-yt"
-                      placeholder="/audio"
-                      className="bg-background border"
-                      value={outputDir}
-                      onChange={(e) => setOutputDir(e.target.value)}
+                    <Label htmlFor="youtube-download-type">Download Type</Label>
+                    <Select 
+                      defaultValue="single" 
+                      onValueChange={(value) => setYoutubeDownloadType(value as "single" | "playlist")}
                       disabled={isDownloading}
-                    />
+                    >
+                      <SelectTrigger className="bg-background border">
+                        <SelectValue placeholder="Select type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="single">Single Video</SelectItem>
+                        <SelectItem value="playlist">Playlist</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   
                   <div className="flex flex-col space-y-2">
@@ -822,20 +891,75 @@ export default function DownloadsPage() {
                   </div>
                 </div>
                 
-                <div className="flex items-center space-x-2 mt-2">
-                  <Checkbox 
-                    id="embed-thumbnails" 
-                    checked={embedThumbnails} 
-                    onCheckedChange={(checked) => {
-                      if (typeof checked === 'boolean') {
-                        setEmbedThumbnails(checked);
-                      }
-                    }}
+                <div className="flex flex-col space-y-2">
+                  <Label htmlFor="youtube-url">
+                    {youtubeDownloadType === "single" ? "Video URL" : "Playlist URL"}
+                  </Label>
+                  <Input
+                    id="youtube-url"
+                    placeholder={youtubeDownloadType === "single" 
+                      ? "https://www.youtube.com/watch?v=..." 
+                      : "https://www.youtube.com/playlist?list=..."}
+                    className="bg-background border"
+                    value={youtubeUrl}
+                    onChange={(e) => setYoutubeUrl(e.target.value)}
                     disabled={isDownloading}
                   />
-                  <Label htmlFor="embed-thumbnails">
-                    Automatically write and embed thumbnails
-                  </Label>
+                </div>
+                
+                <div className="flex flex-col space-y-2">
+                  <Label htmlFor="youtube-output-dir">Output Directory</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="youtube-output-dir"
+                      placeholder="/youtube"
+                      className="bg-background border flex-1"
+                      value={youtubeOutputDir}
+                      onChange={(e) => setYoutubeOutputDir(e.target.value)}
+                      disabled={isDownloading}
+                    />
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsCreateYoutubeFolderDialogOpen(true)}
+                      disabled={isDownloading}
+                    >
+                      <Folder className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="embed-thumbnails" 
+                      checked={embedThumbnails} 
+                      onCheckedChange={(checked) => {
+                        if (typeof checked === 'boolean') {
+                          setEmbedThumbnails(checked);
+                        }
+                      }}
+                      disabled={isDownloading}
+                    />
+                    <Label htmlFor="embed-thumbnails">
+                      Embed thumbnails
+                    </Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="write-all-thumbs" 
+                      checked={writeAllThumbs} 
+                      onCheckedChange={(checked) => {
+                        if (typeof checked === 'boolean') {
+                          setWriteAllThumbs(checked);
+                        }
+                      }}
+                      disabled={isDownloading}
+                    />
+                    <Label htmlFor="write-all-thumbs">
+                      Write all thumbnails (--write-all-thumbnails)
+                    </Label>
+                  </div>
                 </div>
                 
                 {/* Command display */}
@@ -855,7 +979,8 @@ export default function DownloadsPage() {
                 {(isDownloading || downloadComplete) && (
                   <div className="progress-status">
                     {renderStatusItem(downloadStatus, "Download")}
-                    {embedThumbnails && downloadComplete && renderStatusItem(embedStatus, "Thumbnails")}
+                    {(embedThumbnails || writeAllThumbs) && downloadComplete && renderStatusItem(embedStatus, "Thumbnails")}
+                    {youtubeDownloadType === "playlist" && downloadComplete && renderStatusItem(playlistStatus, "Playlist")}
                   </div>
                 )}
                 
@@ -871,14 +996,16 @@ export default function DownloadsPage() {
                   
                   {downloadComplete && (
                     <div className="flex w-full gap-2 mt-2">
-                      <Button 
-                        variant="outline" 
-                        className="flex-1"
-                        onClick={() => setIsCreatePlaylistDialogOpen(true)}
-                      >
-                        <List className="mr-2 h-4 w-4" />
-                        Create Playlist
-                      </Button>
+                      {youtubeDownloadType === "playlist" && (
+                        <Button 
+                          variant="outline" 
+                          className="flex-1"
+                          onClick={() => setIsCreatePlaylistDialogOpen(true)}
+                        >
+                          <List className="mr-2 h-4 w-4" />
+                          Create Playlist
+                        </Button>
+                      )}
                       
                       <Button 
                         variant="outline" 
@@ -887,6 +1014,15 @@ export default function DownloadsPage() {
                       >
                         <Image className="mr-2 h-4 w-4" />
                         Edit Cover
+                      </Button>
+                      
+                      <Button
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => setIsCreateYoutubeFolderDialogOpen(true)}
+                      >
+                        <Folder className="mr-2 h-4 w-4" />
+                        New Folder
                       </Button>
                     </div>
                   )}
@@ -918,8 +1054,14 @@ export default function DownloadsPage() {
               <Label htmlFor="playlist-dir">Directory</Label>
               <Input
                 id="playlist-dir"
-                value={outputDir}
-                onChange={(e) => setOutputDir(e.target.value)}
+                value={Tabs.value === "youtube" ? youtubeOutputDir : outputDir}
+                onChange={(e) => {
+                  if (Tabs.value === "youtube") {
+                    setYoutubeOutputDir(e.target.value);
+                  } else {
+                    setOutputDir(e.target.value);
+                  }
+                }}
                 className="bg-background border"
               />
             </div>
@@ -964,6 +1106,40 @@ export default function DownloadsPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsCreateFolderDialogOpen(false)}>Cancel</Button>
             <Button onClick={handleCreateFolder}>Create</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Create YouTube Folder Dialog */}
+      <Dialog open={isCreateYoutubeFolderDialogOpen} onOpenChange={setIsCreateYoutubeFolderDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create YouTube Folder</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="youtube-folder-name">Folder Name</Label>
+              <Input
+                id="youtube-folder-name"
+                value={youtubeFolderName}
+                onChange={(e) => setYoutubeFolderName(e.target.value)}
+                placeholder="New YouTube Folder"
+                className="bg-background border"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="youtube-folder-path">Parent Directory</Label>
+              <Input
+                id="youtube-folder-path"
+                value={youtubeOutputDir}
+                onChange={(e) => setYoutubeOutputDir(e.target.value)}
+                className="bg-background border"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCreateYoutubeFolderDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleCreateYoutubeFolder}>Create</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
