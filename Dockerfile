@@ -36,5 +36,5 @@ RUN mkdir -p /app/downloads /audio /youtube /playlists \
 # Switch to non-root user
 USER node
 
-# Start the application
-CMD ["npm", "start"]
+# Start the application using the preview server instead of "start"
+CMD ["npm", "run", "preview", "--", "--host", "0.0.0.0", "--port", "8080"]
