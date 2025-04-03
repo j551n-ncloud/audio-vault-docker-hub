@@ -7,7 +7,7 @@ RUN apt-get update && \
     python3 \
     python3-pip \
     ffmpeg \
-    eyeD3 \
+    python3-eyed3 \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
