@@ -1,0 +1,47 @@
+
+version: '3.8'
+
+services:
+  audio-downloader:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: audio-downloader:latest
+    container_name: audio-downloader
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./downloads:/app/downloads
+      - ./audio:/audio
+    environment:
+      - NODE_ENV=production
+      - OUTPUT_DIR=/audio
+      # Add other environment variables as needed
+    restart: unless-stopped
+
+  # Optional: Database service for more advanced features
+  # db:
+  #   image: postgres:14
+  #   container_name: audio-downloader-db
+  #   ports:
+  #     - "5432:5432"
+  #   environment:
+  #     - POSTGRES_USER=postgres
+  #     - POSTGRES_PASSWORD=postgres
+  #     - POSTGRES_DB=audio_downloader
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   restart: unless-stopped
+
+# Define volumes
+volumes:
+  # postgres_data:
+  #   driver: local
+  downloads:
+    driver: local
+  audio:
+    driver: local
+
+networks:
+  default:
+    driver: bridge

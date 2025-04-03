@@ -5,15 +5,25 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Download, Music, Youtube, AlertCircle, Folder, List, CheckCircle2, Image, Settings } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
+import { Download, Music, Youtube, AlertCircle, Folder, List, CheckCircle2, Image, Settings, Upload, Terminal } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 
+// Status types for tracking different processes
+type ProcessStatus = "pending" | "active" | "complete" | "error";
+
+interface ProcessInfo {
+  status: ProcessStatus;
+  progress: number; // 0-100
+  message: string;
+}
+
 export default function DownloadsPage() {
+  // Form states
   const [spotifyUrl, setSpotifyUrl] = useState("");
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [outputDir, setOutputDir] = useState("/audio");
@@ -21,33 +31,91 @@ export default function DownloadsPage() {
   const [progress, setProgress] = useState(0);
   const [generateLyrics, setGenerateLyrics] = useState(true);
   const [embedLyrics, setEmbedLyrics] = useState(true);
+  const [embedThumbnails, setEmbedThumbnails] = useState(true);
   const [audioBitrate, setAudioBitrate] = useState("320");
   const [downloadComplete, setDownloadComplete] = useState(false);
+  const [downloadType, setDownloadType] = useState<"single" | "playlist">("single");
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    // Check localStorage first, then fallback to checking document class
+    const savedMode = localStorage.getItem("theme");
+    if (savedMode) {
+      return savedMode === "dark";
+    }
+    return document.documentElement.classList.contains("dark");
+  });
+  
+  // Album cover states
+  const [albumCoverUrl, setAlbumCoverUrl] = useState("");
+  const [albumCoverFile, setAlbumCoverFile] = useState<File | null>(null);
+  const [albumCoverPreview, setAlbumCoverPreview] = useState("");
+
+  // Dialog states
   const [isCreatePlaylistDialogOpen, setIsCreatePlaylistDialogOpen] = useState(false);
   const [isCreateFolderDialogOpen, setIsCreateFolderDialogOpen] = useState(false);
-  const [playlistName, setPlaylistName] = useState("");
-  const [folderName, setFolderName] = useState("");
-  const [downloadType, setDownloadType] = useState<"single" | "playlist">("single");
   const [isProfileDialogOpen, setIsProfileDialogOpen] = useState(false);
+  const [isAlbumCoverDialogOpen, setIsAlbumCoverDialogOpen] = useState(false);
+  
+  // User profile states
   const [email, setEmail] = useState("admin@example.com");
   const [password, setPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
-  const [isDarkMode, setIsDarkMode] = useState(true);
-  const [albumCoverUrl, setAlbumCoverUrl] = useState("");
-  const [isAlbumCoverDialogOpen, setIsAlbumCoverDialogOpen] = useState(false);
+  const [playlistName, setPlaylistName] = useState("");
+  const [folderName, setFolderName] = useState("");
+  
+  // Process status tracking
+  const [downloadStatus, setDownloadStatus] = useState<ProcessInfo>({
+    status: "pending",
+    progress: 0,
+    message: "Not started"
+  });
+  
+  const [embedStatus, setEmbedStatus] = useState<ProcessInfo>({
+    status: "pending",
+    progress: 0,
+    message: "Not started"
+  });
+  
+  const [playlistStatus, setPlaylistStatus] = useState<ProcessInfo>({
+    status: "pending",
+    progress: 0,
+    message: "Not started"
+  });
 
+  // Command preview
+  const [currentCommand, setCurrentCommand] = useState("");
+  
   const { toast } = useToast();
-
-  // Theme switcher effect
+  
+  // Theme switcher effect with localStorage persistence
   useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
       document.documentElement.classList.remove('light');
+      localStorage.setItem("theme", "dark");
     } else {
       document.documentElement.classList.remove('dark');
       document.documentElement.classList.add('light');
+      localStorage.setItem("theme", "light");
     }
   }, [isDarkMode]);
+
+  // File input handlers for album cover upload
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setAlbumCoverFile(file);
+      
+      // Create preview URL
+      const fileUrl = URL.createObjectURL(file);
+      setAlbumCoverPreview(fileUrl);
+      setAlbumCoverUrl("");  // Clear URL input when file is selected
+      
+      toast({
+        title: "File selected",
+        description: `${file.name} (${Math.round(file.size / 1024)} KB)`
+      });
+    }
+  };
 
   const handleSpotifyDownload = () => {
     if (!spotifyUrl) {
@@ -60,17 +128,73 @@ export default function DownloadsPage() {
       return;
     }
 
+    // Reset status
+    setDownloadStatus({
+      status: "active",
+      progress: 0,
+      message: "Starting download..."
+    });
+    
+    setEmbedStatus({
+      status: "pending", 
+      progress: 0, 
+      message: "Waiting for download to complete"
+    });
+    
+    setPlaylistStatus({
+      status: "pending", 
+      progress: 0, 
+      message: "Waiting for download to complete"
+    });
+    
     setIsDownloading(true);
     setProgress(0);
     setDownloadComplete(false);
+    
+    // Generate command preview
+    const command = `spotdl ${spotifyUrl} --output ${outputDir} --format mp3 --bitrate ${audioBitrate}k ${generateLyrics ? '--generate-lyrics' : ''} ${embedLyrics ? '--embed-lyrics' : ''}`;
+    setCurrentCommand(command);
 
     // Simulate download progress
     const interval = setInterval(() => {
       setProgress((prev) => {
-        if (prev >= 100) {
+        const newProgress = prev + 2;
+        
+        // Update download status
+        setDownloadStatus(status => ({
+          ...status,
+          progress: newProgress,
+          message: newProgress < 100 ? `Downloading... (${newProgress}%)` : "Download complete!"
+        }));
+        
+        if (newProgress >= 100) {
           clearInterval(interval);
           setIsDownloading(false);
           setDownloadComplete(true);
+          setDownloadStatus({
+            status: "complete",
+            progress: 100,
+            message: "Download complete"
+          });
+          
+          // Start lyrics embedding if enabled
+          if (generateLyrics && embedLyrics) {
+            simulateEmbedLyrics();
+          }
+          
+          // If it's a playlist download, update playlist status
+          if (downloadType === "playlist") {
+            setPlaylistStatus({
+              status: "active",
+              progress: 0,
+              message: "Ready to create playlist"
+            });
+            
+            // Auto-open playlist dialog
+            setTimeout(() => {
+              setIsCreatePlaylistDialogOpen(true);
+            }, 500);
+          }
           
           toast({
             title: "Download complete",
@@ -78,16 +202,9 @@ export default function DownloadsPage() {
             icon: <CheckCircle2 className="h-4 w-4" />
           });
           
-          // If it's a playlist download, prompt to create a playlist
-          if (downloadType === "playlist") {
-            setTimeout(() => {
-              setIsCreatePlaylistDialogOpen(true);
-            }, 500);
-          }
-          
           return 100;
         }
-        return prev + 2;
+        return newProgress;
       });
     }, 300);
   };
@@ -103,17 +220,54 @@ export default function DownloadsPage() {
       return;
     }
 
+    // Reset status
+    setDownloadStatus({
+      status: "active",
+      progress: 0,
+      message: "Starting download..."
+    });
+    
+    setEmbedStatus({
+      status: "pending", 
+      progress: 0, 
+      message: "Waiting for download to complete"
+    });
+    
     setIsDownloading(true);
     setProgress(0);
     setDownloadComplete(false);
+    
+    // Generate command preview with thumbnail option
+    const command = `yt-dlp ${youtubeUrl} -x --audio-format mp3 --audio-quality ${audioBitrate}k ${embedThumbnails ? '--embed-thumbnail' : ''} -o "${outputDir}/%(title)s.%(ext)s"`;
+    setCurrentCommand(command);
 
-    // Simulate download progress with combined thumbnail options
+    // Simulate download progress
     const interval = setInterval(() => {
       setProgress((prev) => {
-        if (prev >= 100) {
+        const newProgress = prev + 3;
+        
+        // Update download status
+        setDownloadStatus(status => ({
+          ...status,
+          progress: newProgress,
+          message: newProgress < 100 ? `Downloading... (${newProgress}%)` : "Download complete!"
+        }));
+        
+        if (newProgress >= 100) {
           clearInterval(interval);
           setIsDownloading(false);
           setDownloadComplete(true);
+          setDownloadStatus({
+            status: "complete",
+            progress: 100,
+            message: "Download complete"
+          });
+          
+          // If embedding thumbnails, update status
+          if (embedThumbnails) {
+            simulateEmbedThumbnails();
+          }
+          
           toast({
             title: "Download complete",
             description: "Your audio with thumbnails has been downloaded successfully",
@@ -121,25 +275,82 @@ export default function DownloadsPage() {
           });
           return 100;
         }
-        return prev + 3;
+        return newProgress;
       });
     }, 300);
   };
 
-  const handleEmbedLyrics = () => {
+  const simulateEmbedLyrics = () => {
+    // Start embedding process
+    setEmbedStatus({
+      status: "active",
+      progress: 0,
+      message: "Starting lyrics embedding..."
+    });
+    
     toast({
       title: "Processing",
       description: "Embedding lyrics into downloaded files..."
     });
 
     // Simulate embedding process
-    setTimeout(() => {
-      toast({
-        title: "Complete",
-        description: "Lyrics have been embedded into your audio files",
-        icon: <CheckCircle2 className="h-4 w-4" />
+    const interval = setInterval(() => {
+      setEmbedStatus(prev => {
+        const newProgress = prev.progress + 5;
+        if (newProgress >= 100) {
+          clearInterval(interval);
+          
+          toast({
+            title: "Complete",
+            description: "Lyrics have been embedded into your audio files",
+            icon: <CheckCircle2 className="h-4 w-4" />
+          });
+          
+          return {
+            status: "complete",
+            progress: 100,
+            message: "Lyrics embedding complete"
+          };
+        }
+        
+        return {
+          ...prev,
+          progress: newProgress,
+          message: `Embedding lyrics (${newProgress}%)...`
+        };
       });
-    }, 2000);
+    }, 200);
+  };
+  
+  const simulateEmbedThumbnails = () => {
+    // Start embedding thumbnails process
+    setEmbedStatus({
+      status: "active",
+      progress: 0,
+      message: "Processing thumbnails..."
+    });
+
+    // Simulate embedding process
+    const interval = setInterval(() => {
+      setEmbedStatus(prev => {
+        const newProgress = prev.progress + 5;
+        if (newProgress >= 100) {
+          clearInterval(interval);
+          
+          return {
+            status: "complete",
+            progress: 100,
+            message: "Thumbnails embedded successfully"
+          };
+        }
+        
+        return {
+          ...prev,
+          progress: newProgress,
+          message: `Embedding thumbnails (${newProgress}%)...`
+        };
+      });
+    }, 150);
   };
 
   const handleCreatePlaylist = () => {
@@ -153,21 +364,53 @@ export default function DownloadsPage() {
       return;
     }
     
+    // Update playlist status
+    setPlaylistStatus({
+      status: "active",
+      progress: 0,
+      message: "Creating playlist..."
+    });
+    
     toast({
       title: "Creating playlist",
       description: `Creating ${playlistName}.m3u from downloaded files`
     });
     
-    // Simulate playlist creation
-    setTimeout(() => {
-      toast({
-        title: "Playlist created",
-        description: `${playlistName}.m3u has been created in ${outputDir}`,
-        icon: <CheckCircle2 className="h-4 w-4" />
+    // Generate command for the playlist creation
+    const playlistCommand = `find "${outputDir}" -name "*.mp3" > "${outputDir}/${playlistName}.m3u"`;
+    setCurrentCommand(playlistCommand);
+    
+    // Simulate playlist creation with progress
+    const interval = setInterval(() => {
+      setPlaylistStatus(prev => {
+        const newProgress = prev.progress + 10;
+        
+        if (newProgress >= 100) {
+          clearInterval(interval);
+          
+          toast({
+            title: "Playlist created",
+            description: `${playlistName}.m3u has been created in ${outputDir}`,
+            icon: <CheckCircle2 className="h-4 w-4" />
+          });
+          
+          setIsCreatePlaylistDialogOpen(false);
+          setPlaylistName("");
+          
+          return {
+            status: "complete",
+            progress: 100,
+            message: "Playlist created successfully"
+          };
+        }
+        
+        return {
+          ...prev,
+          progress: newProgress,
+          message: `Creating playlist (${newProgress}%)...`
+        };
       });
-      setIsCreatePlaylistDialogOpen(false);
-      setPlaylistName("");
-    }, 1500);
+    }, 200);
   };
 
   const handleCreateFolder = () => {
@@ -185,6 +428,9 @@ export default function DownloadsPage() {
       title: "Creating folder",
       description: `Creating folder: ${folderName}`
     });
+    
+    // Display the command
+    setCurrentCommand(`mkdir -p "${outputDir}/${folderName}"`);
     
     // Simulate folder creation
     setTimeout(() => {
@@ -236,11 +482,11 @@ export default function DownloadsPage() {
   };
 
   const handleSetAlbumCover = () => {
-    if (!albumCoverUrl) {
+    if (!albumCoverUrl && !albumCoverFile) {
       toast({
         variant: "destructive",
         title: "Input required",
-        description: "Please enter a URL for the album cover",
+        description: "Please provide an image URL or upload a file for the album cover",
         icon: <AlertCircle className="h-4 w-4" />
       });
       return;
@@ -251,17 +497,59 @@ export default function DownloadsPage() {
       description: "Updating album artwork..."
     });
     
-    // Simulate album cover update
-    setTimeout(() => {
-      toast({
-        title: "Album cover updated",
-        description: "Album artwork has been updated successfully",
-        icon: <CheckCircle2 className="h-4 w-4" />
+    let command = "";
+    if (albumCoverFile) {
+      command = `eyeD3 --add-image="${albumCoverFile.name}":FRONT_COVER "${outputDir}/*.mp3"`;
+    } else if (albumCoverUrl) {
+      command = `eyeD3 --add-image="${albumCoverUrl}":FRONT_COVER "${outputDir}/*.mp3"`;
+    }
+    
+    setCurrentCommand(command);
+    
+    // Simulate album cover update with progress
+    const interval = setInterval(() => {
+      setEmbedStatus(prev => {
+        const newProgress = prev.progress + 5;
+        
+        if (newProgress >= 100) {
+          clearInterval(interval);
+          
+          toast({
+            title: "Album cover updated",
+            description: "Album artwork has been updated successfully",
+            icon: <CheckCircle2 className="h-4 w-4" />
+          });
+          
+          setIsAlbumCoverDialogOpen(false);
+          setAlbumCoverUrl("");
+          setAlbumCoverFile(null);
+          setAlbumCoverPreview("");
+          
+          return {
+            status: "complete",
+            progress: 100,
+            message: "Album covers updated successfully"
+          };
+        }
+        
+        return {
+          ...prev,
+          progress: newProgress,
+          message: `Updating album covers (${newProgress}%)...`
+        };
       });
-      setIsAlbumCoverDialogOpen(false);
-      setAlbumCoverUrl("");
-    }, 1500);
+    }, 100);
   };
+
+  const renderStatusItem = (info: ProcessInfo, label: string) => (
+    <div className={`status-item status-${info.status}`}>
+      <span className="status-indicator"></span>
+      <span>{label}: {info.message}</span>
+      {info.status === "active" && info.progress > 0 && info.progress < 100 && (
+        <Progress value={info.progress} className="h-1 flex-1" />
+      )}
+    </div>
+  );
 
   return (
     <div className="p-4 md:p-6 max-w-4xl mx-auto">
@@ -415,13 +703,25 @@ export default function DownloadsPage() {
                   </div>
                 </div>
                 
-                {isDownloading && (
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-xs">
-                      <span>Downloading...</span>
-                      <span>{progress}%</span>
+                {/* Command display */}
+                {currentCommand && !isDownloading && downloadComplete && (
+                  <div>
+                    <Label className="text-xs flex items-center gap-1 mb-1">
+                      <Terminal className="h-3 w-3" />
+                      Last Command
+                    </Label>
+                    <div className="command-display">
+                      $ {currentCommand}
                     </div>
-                    <Progress value={progress} className="h-1" />
+                  </div>
+                )}
+                
+                {/* Combined process status display */}
+                {(isDownloading || downloadComplete) && (
+                  <div className="progress-status">
+                    {renderStatusItem(downloadStatus, "Download")}
+                    {(generateLyrics && embedLyrics) && renderStatusItem(embedStatus, "Lyrics")}
+                    {downloadType === "playlist" && downloadComplete && renderStatusItem(playlistStatus, "Playlist")}
                   </div>
                 )}
                 
@@ -452,7 +752,7 @@ export default function DownloadsPage() {
                         <Button 
                           variant="outline" 
                           className="flex-1"
-                          onClick={handleEmbedLyrics}
+                          onClick={simulateEmbedLyrics}
                         >
                           <Music className="mr-2 h-4 w-4" />
                           Embed Lyrics
@@ -522,18 +822,40 @@ export default function DownloadsPage() {
                   </div>
                 </div>
                 
-                <div className="flex items-center mt-2 mb-2">
-                  <p className="text-sm font-medium">Automatically write and embed thumbnails</p>
-                  <div className="flex-grow border-t border-border ml-2"></div>
+                <div className="flex items-center space-x-2 mt-2">
+                  <Checkbox 
+                    id="embed-thumbnails" 
+                    checked={embedThumbnails} 
+                    onCheckedChange={(checked) => {
+                      if (typeof checked === 'boolean') {
+                        setEmbedThumbnails(checked);
+                      }
+                    }}
+                    disabled={isDownloading}
+                  />
+                  <Label htmlFor="embed-thumbnails">
+                    Automatically write and embed thumbnails
+                  </Label>
                 </div>
                 
-                {isDownloading && (
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-xs">
-                      <span>Downloading...</span>
-                      <span>{progress}%</span>
+                {/* Command display */}
+                {currentCommand && !isDownloading && downloadComplete && (
+                  <div>
+                    <Label className="text-xs flex items-center gap-1 mb-1">
+                      <Terminal className="h-3 w-3" />
+                      Last Command
+                    </Label>
+                    <div className="command-display">
+                      $ {currentCommand}
                     </div>
-                    <Progress value={progress} className="h-1" />
+                  </div>
+                )}
+                
+                {/* Process status display */}
+                {(isDownloading || downloadComplete) && (
+                  <div className="progress-status">
+                    {renderStatusItem(downloadStatus, "Download")}
+                    {embedThumbnails && downloadComplete && renderStatusItem(embedStatus, "Thumbnails")}
                   </div>
                 )}
                 
@@ -544,7 +866,7 @@ export default function DownloadsPage() {
                     disabled={isDownloading}
                   >
                     <Download className="mr-2 h-4 w-4" />
-                    {isDownloading ? "Downloading..." : "Download with Thumbnails"}
+                    {isDownloading ? "Downloading..." : "Download"}
                   </Button>
                   
                   {downloadComplete && (
@@ -601,6 +923,9 @@ export default function DownloadsPage() {
                 className="bg-background border"
               />
             </div>
+            {playlistStatus.status === "active" && (
+              <Progress value={playlistStatus.progress} className="h-1" />
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsCreatePlaylistDialogOpen(false)}>Cancel</Button>
@@ -702,15 +1027,63 @@ export default function DownloadsPage() {
               <Input
                 id="album-cover-url"
                 value={albumCoverUrl}
-                onChange={(e) => setAlbumCoverUrl(e.target.value)}
+                onChange={(e) => {
+                  setAlbumCoverUrl(e.target.value);
+                  if (e.target.value) {
+                    setAlbumCoverPreview(e.target.value);
+                    setAlbumCoverFile(null);
+                  }
+                }}
                 placeholder="https://example.com/album-cover.jpg"
                 className="bg-background border"
+                disabled={!!albumCoverFile}
               />
             </div>
-            {albumCoverUrl && (
+            
+            <div className="space-y-2">
+              <Label htmlFor="album-cover-file">Or Upload Image</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="album-cover-file"
+                  type="file"
+                  accept="image/*"
+                  className="bg-background border hidden"
+                  onChange={handleFileChange}
+                />
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-center"
+                  onClick={() => document.getElementById("album-cover-file")?.click()}
+                  disabled={isDownloading}
+                >
+                  <Upload className="mr-2 h-4 w-4" />
+                  {albumCoverFile ? "Change File" : "Upload Image"}
+                </Button>
+                {albumCoverFile && (
+                  <Button 
+                    variant="outline" 
+                    size="icon"
+                    className="shrink-0"
+                    onClick={() => {
+                      setAlbumCoverFile(null);
+                      setAlbumCoverPreview("");
+                    }}
+                  >
+                    <AlertCircle className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+              {albumCoverFile && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  {albumCoverFile.name} ({Math.round(albumCoverFile.size / 1024)} KB)
+                </p>
+              )}
+            </div>
+            
+            {(albumCoverUrl || albumCoverPreview) && (
               <div className="mt-2 rounded-md overflow-hidden border">
                 <img 
-                  src={albumCoverUrl} 
+                  src={albumCoverPreview || albumCoverUrl} 
                   alt="Album cover preview" 
                   className="w-full h-auto max-h-48 object-contain" 
                   onError={(e) => {
@@ -719,6 +1092,17 @@ export default function DownloadsPage() {
                 />
               </div>
             )}
+            
+            {embedStatus.status === "active" && (
+              <div className="space-y-1">
+                <div className="text-xs flex justify-between">
+                  <span>{embedStatus.message}</span>
+                  <span>{embedStatus.progress}%</span>
+                </div>
+                <Progress value={embedStatus.progress} className="h-1" />
+              </div>
+            )}
+            
             <div className="text-sm text-muted-foreground">
               This will apply to selected or recently downloaded files.
             </div>

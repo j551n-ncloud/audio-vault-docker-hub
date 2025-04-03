@@ -150,3 +150,54 @@
     box-shadow: 0 0 0 0 rgba(0, 122, 255, 0);
   }
 }
+
+/* Progress status styles */
+.progress-status {
+  @apply flex flex-col gap-1 mt-3;
+}
+
+.status-item {
+  @apply flex items-center gap-2 text-xs;
+}
+
+.status-pending {
+  @apply text-muted-foreground;
+}
+
+.status-active {
+  @apply text-primary animate-pulse;
+}
+
+.status-complete {
+  @apply text-green-500;
+}
+
+.status-error {
+  @apply text-destructive;
+}
+
+.status-indicator {
+  @apply w-2 h-2 rounded-full;
+}
+
+.status-pending .status-indicator {
+  @apply bg-muted-foreground;
+}
+
+.status-active .status-indicator {
+  @apply bg-primary;
+}
+
+.status-complete .status-indicator {
+  @apply bg-green-500;
+}
+
+.status-error .status-indicator {
+  @apply bg-destructive;
+}
+
+/* Command display */
+.command-display {
+  @apply bg-muted/30 rounded p-2 mt-2 text-xs font-mono overflow-x-auto whitespace-nowrap;
+}
+
