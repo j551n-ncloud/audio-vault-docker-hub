@@ -26,14 +26,8 @@ COPY . .
 # Build the application
 RUN npm run build
 
-# Set proper permissions for the node user
-RUN chown -R node:node /app
-
 # Expose port
 EXPOSE 8080
-
-# Switch to non-root user
-USER node
 
 # Start the application using the preview server
 CMD ["npm", "run", "preview", "--", "--host", "0.0.0.0", "--port", "8080"]
