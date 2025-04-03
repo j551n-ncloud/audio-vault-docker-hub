@@ -50,7 +50,6 @@ app.post('/metadata', express.json(), (req, res) => {
 });
 
 // Define static routes for React app pages
-// These routes should be simple strings without special characters or patterns
 const reactRoutes = [
   '/metadata',
   '/downloads',
