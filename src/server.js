@@ -49,29 +49,21 @@ app.post('/metadata', express.json(), (req, res) => {
   });
 });
 
-// Explicitly define routes for the React app pages
-app.get('/metadata', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dist/index.html'));
-});
+// Define static routes for React app pages
+const reactRoutes = [
+  '/metadata',
+  '/downloads',
+  '/dashboard',
+  '/library',
+  '/upload',
+  '/settings'
+];
 
-app.get('/downloads', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dist/index.html'));
-});
-
-app.get('/dashboard', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dist/index.html'));
-});
-
-app.get('/library', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dist/index.html'));
-});
-
-app.get('/upload', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dist/index.html'));
-});
-
-app.get('/settings', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dist/index.html'));
+// Set up each route to serve the React app
+reactRoutes.forEach(route => {
+  app.get(route, (req, res) => {
+    res.sendFile(path.join(__dirname, '../dist/index.html'));
+  });
 });
 
 // Handle React routing, return all requests to React app
