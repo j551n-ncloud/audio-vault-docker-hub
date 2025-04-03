@@ -26,15 +26,10 @@ services:
 
 volumes:
   downloads:
-    driver: local
   audio:
-    driver: local
   playlists:
-    driver: local
   youtube:
-    driver: local
 
 networks:
   default:
     driver: bridge
-
