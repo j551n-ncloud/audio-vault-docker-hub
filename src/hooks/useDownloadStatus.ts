@@ -34,8 +34,28 @@ export function useDownloadStatus() {
     progress: 0,
     message: "Not started"
   });
+
+  const downloadFile = async (url: string, filename: string) => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      
+      // Create a link element and trigger download
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      return true;
+    } catch (error) {
+      console.error('Download failed:', error);
+      return false;
+    }
+  };
   
-  const startDownload = ({ command, type, onComplete }: DownloadOptions) => {
+  const startDownload = async ({ command, type, onComplete }: DownloadOptions) => {
     // Reset status
     setDownloadStatus({
       status: "active",
@@ -60,56 +80,53 @@ export function useDownloadStatus() {
     setDownloadComplete(false);
     setCurrentCommand(command);
 
-    // Clean and prepare the command for execution
-    const finalCommand = command.trim();
-
-    console.log(`Executing download command: ${finalCommand}`);
+    // For demonstration, we'll download a sample MP3 file
+    const sampleMp3Url = "https://www2.cs.uic.edu/~i101/SoundFiles/BabyElephantWalk60.mp3";
+    const success = await downloadFile(sampleMp3Url, "sample-music.mp3");
     
-    // Simulate download progress
-    const interval = setInterval(() => {
-      setProgress((prev) => {
-        const newProgress = prev + 2;
-        
-        // Update download status
-        setDownloadStatus(status => ({
-          ...status,
-          progress: newProgress,
-          message: newProgress < 100 ? `Downloading... (${newProgress}%)` : "Download complete!"
-        }));
-        
-        if (newProgress >= 100) {
-          clearInterval(interval);
-          setIsDownloading(false);
-          setDownloadComplete(true);
-          setDownloadStatus({
-            status: "complete",
-            progress: 100,
-            message: "Download complete"
-          });
-          
-          // If it's a playlist download, update playlist status
-          if (type === "playlist") {
-            setPlaylistStatus({
-              status: "active",
-              progress: 0,
-              message: "Ready to create playlist"
-            });
-          }
-          
-          toast({
-            title: "Download complete",
-            description: "Your files have been downloaded successfully"
-          });
-          
-          if (onComplete) {
-            onComplete();
-          }
-          
-          return 100;
-        }
-        return newProgress;
+    if (success) {
+      setDownloadStatus({
+        status: "complete",
+        progress: 100,
+        message: "Download complete!"
       });
-    }, 300);
+      
+      setIsDownloading(false);
+      setDownloadComplete(true);
+      setProgress(100);
+      
+      toast({
+        title: "Download complete",
+        description: "Your file has been downloaded successfully"
+      });
+      
+      if (onComplete) {
+        onComplete();
+      }
+      
+      // If it's a playlist download, update playlist status
+      if (type === "playlist") {
+        setPlaylistStatus({
+          status: "active",
+          progress: 100,
+          message: "Playlist download complete"
+        });
+      }
+    } else {
+      setDownloadStatus({
+        status: "error",
+        progress: 0,
+        message: "Download failed"
+      });
+      
+      toast({
+        variant: "destructive",
+        title: "Download failed",
+        description: "There was an error downloading your file"
+      });
+      
+      setIsDownloading(false);
+    }
   };
   
   const simulateEmbedLyrics = () => {
