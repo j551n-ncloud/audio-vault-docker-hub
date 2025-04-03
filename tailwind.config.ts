@@ -64,7 +64,7 @@ export default {
 					ring: 'hsl(var(--sidebar-ring))'
 				},
 				audio: {
-					purple: "#9c27b0",
+					blue: "#0ea5e9",
 					dark: "#121212",
 					light: "#f5f5f5",
 					gray: "#333333",
