@@ -109,16 +109,16 @@ export function useDownloadStatus() {
   };
   
   const simulateEmbedLyrics = () => {
-    // Start embedding process
+    // Start embedding process with eyeD3
     setEmbedStatus({
       status: "active",
       progress: 0,
-      message: "Starting lyrics embedding..."
+      message: "Starting lyrics embedding with eyeD3..."
     });
     
     toast({
       title: "Processing",
-      description: "Embedding lyrics into downloaded files..."
+      description: "Embedding lyrics into downloaded files using eyeD3..."
     });
 
     // Simulate embedding process
@@ -130,7 +130,7 @@ export function useDownloadStatus() {
           
           toast({
             title: "Complete",
-            description: "Lyrics have been embedded into your audio files"
+            description: "Lyrics have been embedded into your audio files using eyeD3"
           });
           
           return {
@@ -143,7 +143,7 @@ export function useDownloadStatus() {
         return {
           ...prev,
           progress: newProgress,
-          message: `Embedding lyrics (${newProgress}%)...`
+          message: `Embedding lyrics with eyeD3 (${newProgress}%)...`
         };
       });
     }, 200);

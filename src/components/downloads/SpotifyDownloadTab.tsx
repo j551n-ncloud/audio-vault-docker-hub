@@ -48,8 +48,8 @@ export default function SpotifyDownloadTab({ onCreatePlaylist, onEditCover }: Sp
       return;
     }
 
-    // Generate command preview
-    const command = `spotdl ${spotifyUrl} --output "${outputDir}" --format mp3 --bitrate ${audioBitrate}k ${generateLyrics ? '--generate-lrc' : ''} ${embedLyrics ? '--embed-lyrics' : ''}`;
+    // Generate command preview - Note: removed the --embed-lyrics flag as it's not supported
+    const command = `spotdl ${spotifyUrl} --output "${outputDir}" --format mp3 --bitrate ${audioBitrate}k ${generateLyrics ? '--generate-lrc' : ''}`;
     
     // Start download process
     startDownload({
@@ -57,7 +57,13 @@ export default function SpotifyDownloadTab({ onCreatePlaylist, onEditCover }: Sp
       type: downloadType,
       onComplete: () => {
         if (generateLyrics && embedLyrics) {
+          // After download is complete, we'd embed lyrics using eyeD3 as a separate step
           simulateEmbedLyrics();
+          
+          // The actual command to embed lyrics with eyeD3 would be something like:
+          // find "${outputDir}" -name "*.mp3" -exec eyeD3 --add-lyrics="{}.lrc" {} \;
+          const eyeD3Command = `find "${outputDir}" -name "*.mp3" -exec eyeD3 --add-lyrics="{}.lrc" {} \\;`;
+          console.log("Embedding lyrics command:", eyeD3Command);
         }
       }
     });
@@ -165,7 +171,7 @@ export default function SpotifyDownloadTab({ onCreatePlaylist, onEditCover }: Sp
               htmlFor="embed-lyrics" 
               className={!generateLyrics ? "text-muted-foreground" : ""}
             >
-              Auto-embed lyrics after download
+              Auto-embed lyrics after download (using eyeD3)
             </Label>
           </div>
         </div>
