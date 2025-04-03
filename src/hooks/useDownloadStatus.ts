@@ -16,7 +16,6 @@ export function useDownloadStatus() {
   
   const { toast } = useToast();
   
-  // Process status tracking
   const [downloadStatus, setDownloadStatus] = useState<ProcessInfo>({
     status: "pending",
     progress: 0,
@@ -40,7 +39,6 @@ export function useDownloadStatus() {
       const response = await fetch(url);
       const blob = await response.blob();
       
-      // Create a link element and trigger download
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
       link.download = filename;
@@ -56,7 +54,6 @@ export function useDownloadStatus() {
   };
   
   const startDownload = async ({ command, type, onComplete }: DownloadOptions) => {
-    // Reset status
     setDownloadStatus({
       status: "active",
       progress: 0,
@@ -80,11 +77,21 @@ export function useDownloadStatus() {
     setDownloadComplete(false);
     setCurrentCommand(command);
 
-    // For demonstration, we'll download a sample MP3 file
-    const sampleMp3Url = "https://www2.cs.uic.edu/~i101/SoundFiles/BabyElephantWalk60.mp3";
-    const success = await downloadFile(sampleMp3Url, "sample-music.mp3");
-    
-    if (success) {
+    try {
+      const response = await fetch('http://localhost:8080/download', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ command })
+      });
+
+      if (!response.ok) {
+        throw new Error('Download failed');
+      }
+
+      const data = await response.json();
+      
       setDownloadStatus({
         status: "complete",
         progress: 100,
@@ -104,15 +111,16 @@ export function useDownloadStatus() {
         onComplete();
       }
       
-      // If it's a playlist download, update playlist status
       if (type === "playlist") {
         setPlaylistStatus({
-          status: "active",
+          status: "complete",
           progress: 100,
           message: "Playlist download complete"
         });
       }
-    } else {
+    } catch (error) {
+      console.error('Download failed:', error);
+      
       setDownloadStatus({
         status: "error",
         progress: 0,
@@ -130,7 +138,6 @@ export function useDownloadStatus() {
   };
   
   const simulateEmbedLyrics = () => {
-    // Start embedding process with eyeD3
     setEmbedStatus({
       status: "active",
       progress: 0,
@@ -142,7 +149,6 @@ export function useDownloadStatus() {
       description: "Embedding lyrics into downloaded files using eyeD3..."
     });
 
-    // Simulate embedding process
     const interval = setInterval(() => {
       setEmbedStatus(prev => {
         const newProgress = prev.progress + 5;
@@ -171,14 +177,12 @@ export function useDownloadStatus() {
   };
   
   const simulateEmbedThumbnails = () => {
-    // Start embedding thumbnails process
     setEmbedStatus({
       status: "active",
       progress: 0,
       message: "Processing thumbnails..."
     });
 
-    // Simulate embedding process
     const interval = setInterval(() => {
       setEmbedStatus(prev => {
         const newProgress = prev.progress + 5;
@@ -202,7 +206,6 @@ export function useDownloadStatus() {
   };
   
   const createPlaylist = (playlistName: string, outputDir: string) => {
-    // Update playlist status
     setPlaylistStatus({
       status: "active",
       progress: 0,
@@ -214,11 +217,9 @@ export function useDownloadStatus() {
       description: `Creating ${playlistName}.m3u from downloaded files`
     });
     
-    // Generate command for the playlist creation
     const playlistCommand = `find "${outputDir}" -name "*.mp3" > "${outputDir}/${playlistName}.m3u"`;
     setCurrentCommand(playlistCommand);
     
-    // Simulate playlist creation with progress
     const interval = setInterval(() => {
       setPlaylistStatus(prev => {
         const newProgress = prev.progress + 10;

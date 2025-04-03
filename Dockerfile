@@ -10,7 +10,7 @@ RUN apt-get update && \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Install spotdl, yt-dlp and eyeD3 with --break-system-packages flag
+# Install spotdl, yt-dlp and eyeD3
 RUN pip3 install --no-cache-dir --break-system-packages spotdl yt-dlp eyeD3
 
 # Set working directory
@@ -29,5 +29,5 @@ RUN npm run build
 # Expose port
 EXPOSE 8080
 
-# Start the application using the preview server
-CMD ["npm", "run", "preview", "--", "--host", "0.0.0.0", "--port", "8080"]
+# Start both the server and the frontend
+CMD ["node", "src/server.js"]
