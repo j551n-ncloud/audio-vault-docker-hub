@@ -24,8 +24,13 @@ RUN apt-get update && apt-get install -y \
 RUN wget https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux -O /usr/local/bin/yt-dlp \
     && chmod a+rx /usr/local/bin/yt-dlp
 
-# Install Python packages
-RUN pip install --no-cache-dir spotdl eyed3
+# Create virtual environment to avoid system package conflicts
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Install Python packages in the virtual environment
+RUN /opt/venv/bin/pip install --upgrade pip && \
+    /opt/venv/bin/pip install spotdl eyed3
 
 # Set up scripts directory
 WORKDIR /spotdl

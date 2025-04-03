@@ -9,13 +9,14 @@ import {
 } from "@/components/ui/table";
 import { 
   Edit, Trash2, Save, File, FileAudio, 
-  Folder, RefreshCw, Music, List 
+  Folder, RefreshCw, Music, List, Check
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 
 type FileItem = {
   name: string;
@@ -23,6 +24,7 @@ type FileItem = {
   size?: string;
   lastModified?: string;
   path?: string;
+  selected?: boolean;
 };
 
 type MetadataField = {
@@ -44,6 +46,12 @@ export default function MetadataPage() {
 
   const [isCreatePlaylistDialogOpen, setIsCreatePlaylistDialogOpen] = useState(false);
   const [playlistName, setPlaylistName] = useState("");
+  const [isCreateFolderDialogOpen, setIsCreateFolderDialogOpen] = useState(false);
+  const [folderName, setFolderName] = useState("");
+  const [isProcessingDialogOpen, setIsProcessingDialogOpen] = useState(false);
+  const [processType, setProcessType] = useState("");
+  const [processPath, setProcessPath] = useState("");
+  const [selectMode, setSelectMode] = useState(false);
 
   // Simulate fetching files - this would be replaced with actual API calls
   useEffect(() => {
@@ -67,6 +75,18 @@ export default function MetadataPage() {
   }, [currentPath]);
 
   const handleFileSelect = (file: FileItem) => {
+    if (selectMode) {
+      // Toggle selection in multi-select mode
+      const updatedFiles = files.map(f => {
+        if (f.name === file.name) {
+          return { ...f, selected: !f.selected };
+        }
+        return f;
+      });
+      setFiles(updatedFiles);
+      return;
+    }
+    
     if (file.type === "folder") {
       // Navigate into folder
       setCurrentPath(`${currentPath}/${file.name}`);
@@ -176,10 +196,24 @@ export default function MetadataPage() {
   const handleCreatePlaylist = () => {
     if (!playlistName) return;
     
+    // Get selected files or use all MP3 files in current directory
+    const selectedMp3Files = selectMode
+      ? files.filter(f => f.selected && f.name.endsWith(".mp3"))
+      : files.filter(f => f.name.endsWith(".mp3"));
+    
+    if (selectedMp3Files.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "No files selected",
+        description: "Please select at least one MP3 file for the playlist",
+      });
+      return;
+    }
+    
     // In a real app, this would call your backend API
     toast({
       title: "Playlist created",
-      description: `Created playlist: ${playlistName}.m3u`,
+      description: `Created playlist: ${playlistName}.m3u with ${selectedMp3Files.length} tracks`,
     });
     
     // Add the new playlist to the file list
@@ -188,14 +222,44 @@ export default function MetadataPage() {
       { 
         name: `${playlistName}.m3u`, 
         type: "file",
-        size: "0.1 KB",
+        size: `${(selectedMp3Files.length * 0.1).toFixed(1)} KB`,
         lastModified: new Date().toISOString().split("T")[0],
         path: `${currentPath}/${playlistName}.m3u`
       }
     ]);
     
+    // Exit selection mode if active
+    if (selectMode) setSelectMode(false);
+    
+    // Clear selections
+    const updatedFiles = files.map(f => ({ ...f, selected: false }));
+    setFiles(updatedFiles);
+    
     setIsCreatePlaylistDialogOpen(false);
     setPlaylistName("");
+  };
+
+  const handleCreateFolder = () => {
+    if (!folderName) return;
+    
+    // In a real app, this would call your backend API
+    toast({
+      title: "Folder created",
+      description: `Created folder: ${folderName}`,
+    });
+    
+    // Add the new folder to the file list
+    setFiles([
+      ...files,
+      {
+        name: folderName,
+        type: "folder",
+        path: `${currentPath}/${folderName}`
+      }
+    ]);
+    
+    setIsCreateFolderDialogOpen(false);
+    setFolderName("");
   };
 
   const handleUpdateMetadata = (index: number, value: string) => {
@@ -205,30 +269,92 @@ export default function MetadataPage() {
   };
 
   const handleEmbedLyrics = () => {
-    if (!selectedFile || !selectedFile.name.endsWith(".mp3")) return;
+    const selectedMp3Files = selectMode
+      ? files.filter(f => f.selected && f.name.endsWith(".mp3"))
+      : (selectedFile && selectedFile.name.endsWith(".mp3")) ? [selectedFile] : [];
     
-    // Check if we have a matching .lrc file
-    const baseName = selectedFile.name.replace(".mp3", "");
-    const hasLyricsFile = files.some(file => file.name === `${baseName}.lrc`);
-    
-    if (hasLyricsFile) {
-      toast({
-        title: "Lyrics embedded",
-        description: `Embedded lyrics into ${selectedFile.name}`,
-      });
-    } else {
+    if (selectedMp3Files.length === 0) {
       toast({
         variant: "destructive",
-        title: "Error",
-        description: `No matching .lrc file found for ${selectedFile.name}`,
+        title: "No MP3 files selected",
+        description: "Please select at least one MP3 file to embed lyrics",
       });
+      return;
+    }
+    
+    setProcessType("embed_lyrics");
+    setProcessPath(currentPath);
+    setIsProcessingDialogOpen(true);
+    
+    // In a real app, this would call your backend API
+    // Simulating API call
+    setTimeout(() => {
+      setIsProcessingDialogOpen(false);
+      toast({
+        title: "Lyrics embedded",
+        description: `Embedded lyrics into ${selectedMp3Files.length} files`,
+      });
+      
+      // Exit selection mode if active
+      if (selectMode) setSelectMode(false);
+      
+      // Clear selections
+      const updatedFiles = files.map(f => ({ ...f, selected: false }));
+      setFiles(updatedFiles);
+    }, 1500);
+  };
+
+  const handleToggleSelectMode = () => {
+    setSelectMode(!selectMode);
+    if (!selectMode) {
+      // Clear any existing selections when entering select mode
+      const updatedFiles = files.map(f => ({ ...f, selected: false }));
+      setFiles(updatedFiles);
+      setSelectedFile(null);
     }
   };
+
+  const selectedCount = files.filter(f => f.selected).length;
 
   return (
     <div className="p-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Audio Metadata Manager</h1>
+        <div className="flex gap-2">
+          <Button
+            variant={selectMode ? "secondary" : "outline"}
+            onClick={handleToggleSelectMode}
+          >
+            {selectMode ? (
+              <>
+                <Check className="w-4 h-4 mr-2" />
+                {selectedCount} selected
+              </>
+            ) : (
+              "Select mode"
+            )}
+          </Button>
+          
+          {selectMode && selectedCount > 0 && (
+            <Button
+              variant="secondary"
+              onClick={() => setIsCreatePlaylistDialogOpen(true)}
+            >
+              <List className="w-4 h-4 mr-2" />
+              Create Playlist
+            </Button>
+          )}
+          
+          {selectMode && selectedCount > 0 && files.some(f => f.selected && f.name.endsWith(".mp3")) && (
+            <Button
+              variant="secondary"
+              onClick={handleEmbedLyrics}
+            >
+              <Music className="w-4 h-4 mr-2" />
+              Embed Lyrics
+            </Button>
+          )}
+        </div>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -254,6 +380,14 @@ export default function MetadataPage() {
                 <RefreshCw className="w-4 h-4" />
               </Button>
               <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setIsCreateFolderDialogOpen(true)}
+              >
+                <Folder className="w-4 h-4 mr-1" />
+                New Folder
+              </Button>
+              <Button 
                 variant="secondary" 
                 size="sm"
                 onClick={() => setIsCreatePlaylistDialogOpen(true)}
@@ -277,6 +411,7 @@ export default function MetadataPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      {selectMode && <TableHead className="w-[50px]"></TableHead>}
                       <TableHead>Name</TableHead>
                       <TableHead>Size</TableHead>
                       <TableHead>Last Modified</TableHead>
@@ -288,9 +423,26 @@ export default function MetadataPage() {
                       files.map((file) => (
                         <TableRow 
                           key={file.name}
-                          className={selectedFile?.name === file.name ? "bg-muted/50" : ""}
+                          className={selectedFile?.name === file.name || file.selected ? "bg-muted/50" : ""}
                           onClick={() => handleFileSelect(file)}
                         >
+                          {selectMode && (
+                            <TableCell>
+                              <Checkbox 
+                                checked={file.selected} 
+                                onCheckedChange={() => {
+                                  const updatedFiles = files.map(f => {
+                                    if (f.name === file.name) {
+                                      return { ...f, selected: !f.selected };
+                                    }
+                                    return f;
+                                  });
+                                  setFiles(updatedFiles);
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                            </TableCell>
+                          )}
                           <TableCell>
                             <div className="flex items-center">
                               {file.type === "folder" ? (
@@ -335,7 +487,7 @@ export default function MetadataPage() {
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={4} className="text-center py-8">
+                        <TableCell colSpan={selectMode ? 5 : 4} className="text-center py-8">
                           No files found in this directory
                         </TableCell>
                       </TableRow>
@@ -470,11 +622,60 @@ export default function MetadataPage() {
                 className="bg-black/20"
               />
             </div>
+            <p className="text-sm text-muted-foreground">
+              {selectMode && selectedCount > 0 ? 
+                `${selectedCount} files will be added to the playlist.` : 
+                "All MP3 files in the current folder will be added to the playlist."}
+            </p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsCreatePlaylistDialogOpen(false)}>Cancel</Button>
             <Button onClick={handleCreatePlaylist}>Create</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Create Folder Dialog */}
+      <Dialog open={isCreateFolderDialogOpen} onOpenChange={setIsCreateFolderDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create New Folder</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="folder-name">Folder Name</Label>
+              <Input
+                id="folder-name"
+                value={folderName}
+                onChange={(e) => setFolderName(e.target.value)}
+                placeholder="New Folder"
+                className="bg-black/20"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCreateFolderDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleCreateFolder}>Create</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Processing Dialog */}
+      <Dialog open={isProcessingDialogOpen} onOpenChange={setIsProcessingDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {processType === "embed_lyrics" ? "Embedding Lyrics" : "Processing"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col items-center justify-center py-8">
+            <RefreshCw className="h-8 w-8 animate-spin text-audio-purple mb-4" />
+            <p className="text-center">
+              {processType === "embed_lyrics" 
+                ? "Embedding lyrics into selected MP3 files..." 
+                : "Processing files..."}
+            </p>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
